@@ -1,33 +1,106 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
-const authConfig = require('../config/auth');
+const { authenticateUser } = require('../config/auth');
 const { ensureNotAuthenticated } = require('../middleware/auth');
 
 // Home/Login page
 router.get('/', ensureNotAuthenticated, (req, res) => {
     res.render('auth', {
-        title: 'College Lab Portal - Login'
+        title: 'Login',
     });
 });
 
-// Login 
+// Register user
+router.post('/register', async (req, res) => {
+    try {
+        const { name, email, password, confirmPassword, role, studentId } = req.body;
+        
+        // Simple validation
+        const errors = [];
+        
+        if (!name || !email || !password || !confirmPassword || !role) {
+            errors.push('Please fill in all required fields');
+        }
+        
+        if (password !== confirmPassword) {
+            errors.push('Passwords do not match');
+        }
+        
+        if (password.length < 6) {
+            errors.push('Password should be at least 6 characters');
+        }
+        
+        if (role === 'student' && !studentId) {
+            errors.push('Student ID is required for student accounts');
+        }
+        
+        // Check if email exists
+        const existingUser = await User.getByEmail(email);
+        if (existingUser) {
+            errors.push('Email is already registered');
+        }
+        
+        // If there are errors, render the form again with errors
+        if (errors.length > 0) {
+            return res.render('auth', {
+                title: 'Register',
+                error_msg: errors.join(', '),
+                name,
+                email,
+                role,
+                studentId,
+                showRegisterForm: true,
+            });
+        }
+        
+        // Create user
+        const userData = { name, email, password, role, studentId };
+        const user = await User.create(userData);
+        
+        // Set session
+        req.session.user = user;
+        req.session.success_msg = 'You are now registered and logged in';
+        
+        // Redirect based on role
+        if (user.role === 'student') {
+            res.redirect('/student/dashboard');
+        } else {
+            res.redirect('/teacher/dashboard');
+        }
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.render('auth', {
+            title: 'Register',
+            error_msg: 'An error occurred during registration. Please try again.',
+            showRegisterForm: true,
+        });
+    }
+});
+
+// Login user
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
         
-        // Basic validation
+        // Simple validation
         if (!email || !password) {
-            req.session.error_msg = 'Please fill in all fields';
-            return res.redirect('/');
+            return res.render('auth', {
+                title: 'Login',
+                error_msg: 'Please provide both email and password',
+                email,
+            });
         }
         
         // Authenticate user
-        const user = await authConfig.authenticateUser(email, password);
+        const user = await authenticateUser(email, password);
         
         if (!user) {
-            req.session.error_msg = 'Invalid email or password';
-            return res.redirect('/');
+            return res.render('auth', {
+                title: 'Login',
+                error_msg: 'Invalid email or password',
+                email,
+            });
         }
         
         // Set session
@@ -35,75 +108,16 @@ router.post('/login', async (req, res) => {
         
         // Redirect based on role
         if (user.role === 'student') {
-            return res.redirect('/student/dashboard');
-        } else if (user.role === 'teacher') {
-            return res.redirect('/teacher/dashboard');
+            res.redirect('/student/dashboard');
         } else {
-            req.session.error_msg = 'Invalid user role';
-            return res.redirect('/');
+            res.redirect('/teacher/dashboard');
         }
     } catch (error) {
-        console.error('Login error:', error.message);
-        req.session.error_msg = 'An error occurred during login. Please try again.';
-        res.redirect('/');
-    }
-});
-
-// Register 
-router.post('/register', async (req, res) => {
-    try {
-        const { name, email, password, password2, role, student_id } = req.body;
-        
-        // Basic validation
-        if (!name || !email || !password || !password2 || !role) {
-            req.session.error_msg = 'Please fill in all fields';
-            return res.redirect('/');
-        }
-        
-        if (password !== password2) {
-            req.session.error_msg = 'Passwords do not match';
-            return res.redirect('/');
-        }
-        
-        if (password.length < 6) {
-            req.session.error_msg = 'Password should be at least 6 characters';
-            return res.redirect('/');
-        }
-        
-        if (role === 'student' && !student_id) {
-            req.session.error_msg = 'Student ID is required for student accounts';
-            return res.redirect('/');
-        }
-        
-        // Create user
-        const user = await User.create({
-            name,
-            email,
-            password,
-            role,
-            student_id: role === 'student' ? student_id : null
+        console.error('Login error:', error);
+        res.render('auth', {
+            title: 'Login',
+            error_msg: 'An error occurred during login. Please try again.',
         });
-        
-        // Set session
-        req.session.user = user;
-        req.session.success_msg = 'Registration successful! Welcome to College Lab Portal.';
-        
-        // Redirect based on role
-        if (role === 'student') {
-            return res.redirect('/student/dashboard');
-        } else {
-            return res.redirect('/teacher/dashboard');
-        }
-    } catch (error) {
-        console.error('Registration error:', error.message);
-        
-        if (error.message === 'Email already in use') {
-            req.session.error_msg = error.message;
-        } else {
-            req.session.error_msg = 'An error occurred during registration. Please try again.';
-        }
-        
-        res.redirect('/');
     }
 });
 
@@ -111,7 +125,6 @@ router.post('/register', async (req, res) => {
 router.get('/logout', (req, res) => {
     req.session.destroy((err) => {
         if (err) {
-            console.error('Error destroying session:', err);
             return res.redirect('/');
         }
         res.redirect('/');

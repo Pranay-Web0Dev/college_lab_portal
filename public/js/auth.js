@@ -1,20 +1,28 @@
 /**
  * Authentication page specific JavaScript
  */
-
 document.addEventListener('DOMContentLoaded', function() {
-    // Role selection change event in registration form
-    const roleSelect = document.getElementById('registerRole');
-    if (roleSelect) {
-        roleSelect.addEventListener('change', function() {
-            toggleStudentFields(this.value === 'student');
+    // Set up role selection behavior
+    const roleStudent = document.getElementById('roleStudent');
+    const roleTeacher = document.getElementById('roleTeacher');
+    
+    if (roleStudent && roleTeacher) {
+        roleStudent.addEventListener('change', function() {
+            toggleStudentFields(this.checked);
         });
+        
+        roleTeacher.addEventListener('change', function() {
+            toggleStudentFields(!this.checked);
+        });
+        
+        // Initialize based on current selection
+        toggleStudentFields(roleStudent.checked);
     }
     
-    // Set up tab persistence
+    // Setup tab persistence
     setupTabPersistence();
     
-    // If there's an error, make sure the correct tab is shown
+    // Check for error messages and switch tab accordingly
     checkErrorAndSwitchTab();
 });
 
@@ -26,17 +34,19 @@ function toggleStudentFields(isStudent) {
     const studentFields = document.querySelectorAll('.student-field');
     
     studentFields.forEach(field => {
-        field.classList.toggle('d-none', !isStudent);
-        
-        // Update required attribute on input fields
-        const inputs = field.querySelectorAll('input, select');
-        inputs.forEach(input => {
-            if (isStudent) {
-                input.setAttribute('required', 'required');
-            } else {
+        if (isStudent) {
+            field.style.display = 'block';
+            const input = field.querySelector('input');
+            if (input) {
+                input.setAttribute('required', '');
+            }
+        } else {
+            field.style.display = 'none';
+            const input = field.querySelector('input');
+            if (input) {
                 input.removeAttribute('required');
             }
-        });
+        }
     });
 }
 
@@ -44,52 +54,40 @@ function toggleStudentFields(isStudent) {
  * Save and restore tab state
  */
 function setupTabPersistence() {
-    // Check if there's a stored tab
-    const activeTab = sessionStorage.getItem('activeAuthTab');
-    if (activeTab) {
-        try {
-            const tab = new bootstrap.Tab(document.querySelector(activeTab));
-            tab.show();
-        } catch (e) {
-            console.error('Error restoring tab:', e);
-        }
-    }
+    const authTabs = document.getElementById('authTabs');
     
-    // Add event listener to save tab state
-    const tabElements = document.querySelectorAll('button[data-bs-toggle="tab"]');
-    tabElements.forEach(tabEl => {
-        tabEl.addEventListener('shown.bs.tab', function (event) {
-            sessionStorage.setItem('activeAuthTab', '#' + event.target.id);
+    if (!authTabs) return;
+    
+    // Store active tab in session storage when clicked
+    const tabs = authTabs.querySelectorAll('[data-bs-toggle="tab"]');
+    tabs.forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(e) {
+            sessionStorage.setItem('activeAuthTab', e.target.id);
         });
     });
+    
+    // Check if we have a stored active tab
+    const activeTab = sessionStorage.getItem('activeAuthTab');
+    if (activeTab) {
+        const tab = document.getElementById(activeTab);
+        if (tab) {
+            const bsTab = new bootstrap.Tab(tab);
+            bsTab.show();
+        }
+    }
 }
 
 /**
  * Check for error messages and switch to appropriate tab
  */
 function checkErrorAndSwitchTab() {
-    const errorMsg = document.querySelector('.alert-danger');
+    const showRegisterForm = document.querySelector('meta[name="showRegisterForm"]');
     
-    if (errorMsg) {
-        // If error message contains specific text related to registration
-        const errorText = errorMsg.textContent.toLowerCase();
-        const registrationErrors = [
-            'passwords do not match',
-            'password should be at least',
-            'email already in use',
-            'student id is required'
-        ];
-        
-        const isRegistrationError = registrationErrors.some(err => errorText.includes(err));
-        
-        if (isRegistrationError) {
-            // Switch to registration tab
-            try {
-                const tab = new bootstrap.Tab(document.querySelector('#register-tab'));
-                tab.show();
-            } catch (e) {
-                console.error('Error switching tab:', e);
-            }
+    if (showRegisterForm && showRegisterForm.content === 'true') {
+        const registerTab = document.getElementById('register-tab');
+        if (registerTab) {
+            const bsTab = new bootstrap.Tab(registerTab);
+            bsTab.show();
         }
     }
 }

@@ -1,228 +1,160 @@
-/* Main Styles for College Lab Portal */
+/* Custom CSS for College Lab Portal */
 
-/* Global Styles */
-:root {
-  --primary-color: #0d6efd;
-  --secondary-color: #6c757d;
-  --success-color: #198754;
-  --danger-color: #dc3545;
-  --info-color: #0dcaf0;
-  --warning-color: #ffc107;
-  --light-color: #f8f9fa;
-  --dark-color: #212529;
-  --primary-hover: #0b5ed7;
-  --border-color: #dee2e6;
-}
-
+/* General styles */
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f5f7fa;
-  color: #333;
-  line-height: 1.6;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #f8f9fa;
 }
 
+.container {
+    flex: 1;
+}
+
+/* Footer */
 .footer {
-  margin-top: auto;
+    margin-top: auto;
 }
 
-/* Helper Classes */
-.fw-semibold {
-  font-weight: 600;
-}
-
-/* Authentication Page */
+/* Auth page */
 .auth-container {
-  height: 100vh;
-  padding: 0;
-  overflow: hidden;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
 }
 
-.login-col {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #f8f9fa;
+.student-field {
+    transition: all 0.3s ease;
 }
 
-.hero-col {
-  background-color: var(--primary-color);
+/* Dashboard cards */
+.dashboard-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.login-card {
-  max-width: 540px;
-  width: 100%;
-  border: none;
-  border-radius: 1rem;
+.dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
 }
 
-.auth-hero-container {
-  background-image: url('https://pixabay.com/get/g36057730d4abc9fc3736e31faf0afeb7bfc2888cb9680fd1bd9b12795d0d79d7a36c2ce157c31fb4f7a8b4384a6d4912f1a4f1fb46ec20fba0f30c09e1e80a4f_1280.jpg');
-  background-size: cover;
-  background-position: center;
-  position: relative;
+.stat-card {
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
 }
 
-.auth-hero-overlay {
-  background: rgba(13, 110, 253, 0.8);
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+.stat-card h5 {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
 }
 
-.hero-content {
-  max-width: 500px;
+.stat-card .stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0;
 }
 
-.feature-item {
-  margin-bottom: 1rem;
-  font-size: 1.1rem;
-}
-
-/* Navbar */
-.navbar {
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.navbar-brand {
-  font-weight: 600;
-}
-
-/* Cards and Form Elements */
-.card {
-  border-radius: 0.5rem;
-  border: 1px solid var(--border-color);
-  overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.card-header {
-  border-bottom: 1px solid var(--border-color);
-  padding: 1rem;
-  background-color: #fff;
-}
-
-.card.shadow-sm:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
-}
-
-.btn {
-  border-radius: 0.375rem;
-  padding: 0.375rem 0.75rem;
-  font-weight: 500;
-}
-
-.btn-primary {
-  background-color: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-.btn-primary:hover {
-  background-color: var(--primary-hover);
-  border-color: var(--primary-hover);
-}
-
-.form-control, .form-select {
-  border-radius: 0.375rem;
-  padding: 0.375rem 0.75rem;
-  border: 1px solid var(--border-color);
-}
-
-.form-control:focus, .form-select:focus {
-  border-color: var(--primary-hover);
-  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-}
-
-/* Dashboard elements */
-.campus-img {
-  height: 220px;
-  object-fit: cover;
-}
-
-/* Table styles */
-.table {
-  margin-bottom: 0;
-}
-
-.table-responsive {
-  overflow-x: auto;
-}
-
-/* Admin panel specific styles */
-.admin-sidebar {
-  background-color: var(--dark-color);
-  color: white;
-  min-height: calc(100vh - 56px);
-}
-
-.admin-sidebar .nav-link {
-  color: #ccc;
-}
-
-.admin-sidebar .nav-link.active, 
-.admin-sidebar .nav-link:hover {
-  color: white;
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Responsive adjustments */
-@media (max-width: 991.98px) {
-  .table-responsive {
-    width: 100%;
+/* Lab sessions */
+.lab-session-card {
     margin-bottom: 1rem;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-  }
+    transition: transform 0.2s ease;
 }
 
-@media (max-width: 767.98px) {
-  .card-body {
-    padding: 1rem;
-  }
-  
-  .auth-container {
-    overflow-y: auto;
-  }
-  
-  .login-card {
-    margin: 1rem;
-  }
+.lab-session-card:hover {
+    transform: translateY(-3px);
 }
 
-/* Animation for hover effects */
-.btn, .card, .nav-link {
-  transition: all 0.2s ease-in-out;
+.attendance-table th,
+.attendance-table td {
+    vertical-align: middle;
 }
 
-/* Alert stylings */
-.alert {
-  border-radius: 0.375rem;
-}
-
-/* Custom badges */
-.badge {
-  font-weight: 500;
-  padding: 0.35em 0.65em;
+/* Custom utilities */
+.text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Form validation styles */
-.was-validated .form-control:invalid:focus, 
-.form-control.is-invalid:focus {
-  border-color: var(--danger-color);
-  box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+.invalid-input {
+    border-color: #dc3545;
 }
 
-.was-validated .form-control:valid:focus, 
-.form-control.is-valid:focus {
-  border-color: var(--success-color);
-  box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+.invalid-feedback {
+    display: block;
 }
 
-/* Chart card styling */
-canvas {
-  max-width: 100%;
+/* Chart containers */
+.chart-container {
+    position: relative;
+    margin: auto;
+    height: 300px;
+    width: 100%;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+    .stat-card .stat-value {
+        font-size: 2rem;
+    }
+    
+    .chart-container {
+        height: 250px;
+    }
+}
+
+/* Toggle password visibility */
+.toggle-password {
+    cursor: pointer;
+}
+
+/* Active nav link */
+.nav-link.active {
+    font-weight: 600;
+}
+
+/* Attendance status badges */
+.badge.badge-present {
+    background-color: #28a745;
+}
+
+.badge.badge-absent {
+    background-color: #dc3545;
+}
+
+/* Profile section */
+.profile-header {
+    background-color: #343a40;
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+/* Lab filter controls */
+.filter-controls {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Loading spinner */
+.loading-spinner {
+    display: inline-block;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 0.2rem solid #f3f3f3;
+    border-top: 0.2rem solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }

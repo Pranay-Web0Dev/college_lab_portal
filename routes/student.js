@@ -1,228 +1,135 @@
 const express = require('express');
 const router = express.Router();
 const { ensureAuthenticated, ensureStudent } = require('../middleware/auth');
-const User = require('../models/User');
 const Attendance = require('../models/Attendance');
-const Lab = require('../models/Lab');
 const LabSession = require('../models/LabSession');
+const Lab = require('../models/Lab');
+
+// Apply middleware to all routes in this router
+router.use(ensureAuthenticated);
+router.use(ensureStudent);
 
 // Student Dashboard
-router.get('/dashboard', ensureAuthenticated, ensureStudent, async (req, res) => {
+router.get('/dashboard', async (req, res) => {
     try {
-        // Get current day of week
-        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const currentDay = days[new Date().getDay()];
+        // Get attendance data
+        const attendanceData = await Attendance.getByUserId(req.session.user.id);
         
-        // Get available lab sessions for today
-        const availableSessions = await LabSession.getAvailableByDay(currentDay);
+        // Calculate attendance statistics
+        const attendanceStats = {
+            total: attendanceData.length,
+            rate: attendanceData.length > 0 ? Math.round((attendanceData.length / 10) * 100) : 0 // Placeholder calculation
+        };
         
-        // Get student's recent attendance
-        const recentAttendance = await Attendance.getByUserId(req.session.user.id);
+        // Get upcoming lab sessions (example implementation)
+        const upcomingSessions = await LabSession.getAvailableByDay(getCurrentDay());
+        
+        // Get recent attendance (last 5)
+        const recentAttendance = attendanceData.slice(0, 5);
         
         res.render('student/dashboard', {
             title: 'Student Dashboard',
-            user: req.session.user,
-            availableSessions,
-            recentAttendance: recentAttendance.slice(0, 5), // Get only 5 most recent
-            currentDay
+            attendance: attendanceStats,
+            recentAttendance,
+            upcomingSessions
         });
     } catch (error) {
-        console.error('Error loading student dashboard:', error.message);
-        req.session.error_msg = 'Error loading dashboard. Please try again.';
-        res.render('student/dashboard', {
-            title: 'Student Dashboard',
-            user: req.session.user,
-            availableSessions: [],
-            recentAttendance: []
-        });
+        console.error('Error in student dashboard:', error);
+        req.session.error_msg = 'Error loading dashboard data';
+        res.redirect('/');
     }
 });
 
-// Student Attendance Page
-router.get('/attendance', ensureAuthenticated, ensureStudent, async (req, res) => {
+// View All Attendance
+router.get('/attendance', async (req, res) => {
     try {
-        // Get student's attendance records
-        const attendance = await Attendance.getByUserId(req.session.user.id);
-        
-        // Get all labs and sessions for mark attendance form
-        const labs = await Lab.getAll();
-        const labSessions = await LabSession.getAll();
+        const attendanceData = await Attendance.getByUserId(req.session.user.id);
         
         res.render('student/attendance', {
             title: 'My Attendance',
-            user: req.session.user,
-            attendance,
-            labs,
-            labSessions
+            attendance: attendanceData
         });
     } catch (error) {
-        console.error('Error loading attendance page:', error.message);
-        req.session.error_msg = 'Error loading attendance data. Please try again.';
+        console.error('Error fetching attendance:', error);
+        req.session.error_msg = 'Error loading attendance data';
+        res.redirect('/student/dashboard');
+    }
+});
+
+// View Available Lab Sessions
+router.get('/labs', async (req, res) => {
+    try {
+        const labs = await Lab.getAll();
+        
+        // For each lab, get its sessions
+        for (const lab of labs) {
+            lab.sessions = await LabSession.getByLabId(lab.id);
+        }
+        
+        res.render('student/labs', {
+            title: 'Available Labs',
+            labs
+        });
+    } catch (error) {
+        console.error('Error fetching labs:', error);
+        req.session.error_msg = 'Error loading lab data';
         res.redirect('/student/dashboard');
     }
 });
 
 // Mark Attendance
-router.post('/attendance/mark', ensureAuthenticated, ensureStudent, async (req, res) => {
+router.post('/mark-attendance', async (req, res) => {
     try {
-        const { lab_id, lab_session_id } = req.body;
+        const { labSessionId, labId } = req.body;
         
-        // Basic validation
-        if (!lab_id || !lab_session_id) {
-            req.session.error_msg = 'Please select both lab and session';
-            return res.redirect('/student/attendance');
+        if (!labSessionId || !labId) {
+            req.session.error_msg = 'Missing required information';
+            return res.redirect('/student/labs');
         }
         
-        // Get lab session to check if it's for today
-        const labSession = await LabSession.getById(lab_session_id);
-        
-        if (!labSession) {
-            req.session.error_msg = 'Invalid lab session selected';
-            return res.redirect('/student/attendance');
-        }
-        
-        // Check if the session is for today
-        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const currentDay = days[new Date().getDay()];
-        
-        if (labSession.day_of_week !== currentDay) {
-            req.session.error_msg = `Cannot mark attendance for ${labSession.day_of_week} session today (${currentDay})`;
-            return res.redirect('/student/attendance');
-        }
-        
-        // Check current time against session time
-        const currentTime = new Date().toTimeString().slice(0, 5); // Format: HH:MM
-        
-        if (currentTime < labSession.start_time || currentTime > labSession.end_time) {
-            req.session.error_msg = `Cannot mark attendance outside session hours (${labSession.start_time} - ${labSession.end_time})`;
-            return res.redirect('/student/attendance');
-        }
-        
-        // Mark attendance
-        await Attendance.markAttendance({
+        const attendanceData = {
             user_id: req.session.user.id,
-            lab_id,
-            lab_session_id
-        });
+            lab_session_id: labSessionId,
+            lab_id: labId
+        };
+        
+        await Attendance.markAttendance(attendanceData);
         
         req.session.success_msg = 'Attendance marked successfully';
         res.redirect('/student/attendance');
     } catch (error) {
-        console.error('Error marking attendance:', error.message);
-        
-        if (error.message === 'Attendance already marked for this session') {
-            req.session.error_msg = error.message;
-        } else {
-            req.session.error_msg = 'Error marking attendance. Please try again.';
-        }
-        
-        res.redirect('/student/attendance');
+        console.error('Error marking attendance:', error);
+        req.session.error_msg = 'Error marking attendance: ' + error.message;
+        res.redirect('/student/labs');
     }
 });
 
 // Delete Attendance Record
-router.post('/attendance/delete/:id', ensureAuthenticated, ensureStudent, async (req, res) => {
+router.post('/delete-attendance/:id', async (req, res) => {
     try {
         const attendanceId = req.params.id;
+        const userId = req.session.user.id;
         
-        // Delete attendance
-        await Attendance.delete(attendanceId, req.session.user.id);
+        const result = await Attendance.delete(attendanceId, userId);
         
-        req.session.success_msg = 'Attendance record deleted successfully';
+        if (result) {
+            req.session.success_msg = 'Attendance record deleted successfully';
+        } else {
+            req.session.error_msg = 'Unable to delete attendance record';
+        }
+        
         res.redirect('/student/attendance');
     } catch (error) {
-        console.error('Error deleting attendance:', error.message);
-        req.session.error_msg = error.message || 'Error deleting attendance record. Please try again.';
+        console.error('Error deleting attendance:', error);
+        req.session.error_msg = 'Error deleting attendance record';
         res.redirect('/student/attendance');
     }
 });
 
-// Profile Page
-router.get('/profile', ensureAuthenticated, ensureStudent, async (req, res) => {
-    try {
-        // Get fresh user data
-        const user = await User.getById(req.session.user.id);
-        
-        if (!user) {
-            req.session.error_msg = 'User not found';
-            return res.redirect('/student/dashboard');
-        }
-        
-        res.render('student/profile', {
-            title: 'My Profile',
-            user: user,
-            formData: user
-        });
-    } catch (error) {
-        console.error('Error loading profile page:', error.message);
-        req.session.error_msg = 'Error loading profile data. Please try again.';
-        res.redirect('/student/dashboard');
-    }
-});
-
-// Update Profile
-router.post('/profile/update', ensureAuthenticated, ensureStudent, async (req, res) => {
-    try {
-        const { name, email, student_id } = req.body;
-        
-        // Basic validation
-        if (!name || !email || !student_id) {
-            req.session.error_msg = 'Please fill in all fields';
-            return res.redirect('/student/profile');
-        }
-        
-        // Update user
-        await User.update(req.session.user.id, {
-            name,
-            email,
-            student_id
-        });
-        
-        // Update session user data
-        req.session.user.name = name;
-        req.session.user.email = email;
-        req.session.user.student_id = student_id;
-        
-        req.session.success_msg = 'Profile updated successfully';
-        res.redirect('/student/profile');
-    } catch (error) {
-        console.error('Error updating profile:', error.message);
-        req.session.error_msg = 'Error updating profile. Please try again.';
-        res.redirect('/student/profile');
-    }
-});
-
-// Change Password
-router.post('/profile/change-password', ensureAuthenticated, ensureStudent, async (req, res) => {
-    try {
-        const { current_password, new_password, confirm_password } = req.body;
-        
-        // Basic validation
-        if (!current_password || !new_password || !confirm_password) {
-            req.session.error_msg = 'Please fill in all password fields';
-            return res.redirect('/student/profile');
-        }
-        
-        if (new_password !== confirm_password) {
-            req.session.error_msg = 'New passwords do not match';
-            return res.redirect('/student/profile');
-        }
-        
-        if (new_password.length < 6) {
-            req.session.error_msg = 'New password should be at least 6 characters';
-            return res.redirect('/student/profile');
-        }
-        
-        // Change password
-        await User.changePassword(req.session.user.id, current_password, new_password);
-        
-        req.session.success_msg = 'Password changed successfully';
-        res.redirect('/student/profile');
-    } catch (error) {
-        console.error('Error changing password:', error.message);
-        req.session.error_msg = error.message || 'Error changing password. Please try again.';
-        res.redirect('/student/profile');
-    }
-});
+// Helper function to get current day of the week
+function getCurrentDay() {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[new Date().getDay()];
+}
 
 module.exports = router;

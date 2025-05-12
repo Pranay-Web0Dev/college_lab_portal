@@ -1,18 +1,11 @@
 /**
  * Main JavaScript functionality for College Lab Portal
  */
-
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize form validation
+    // Initialize all components
     initFormValidation();
-    
-    // Initialize password toggle
     initPasswordToggle();
-    
-    // Initialize tooltips and popovers
     initBootstrapComponents();
-    
-    // Initialize charts if they exist on the page
     initCharts();
 });
 
@@ -20,10 +13,8 @@ document.addEventListener('DOMContentLoaded', function() {
  * Initialize Bootstrap form validation
  */
 function initFormValidation() {
-    // Fetch all the forms we want to apply custom Bootstrap validation styles to
     const forms = document.querySelectorAll('.needs-validation');
-
-    // Loop over them and prevent submission
+    
     Array.from(forms).forEach(form => {
         form.addEventListener('submit', event => {
             if (!form.checkValidity()) {
@@ -31,33 +22,8 @@ function initFormValidation() {
                 event.stopPropagation();
             }
             
-            // Check password confirmation fields if they exist
-            const password = form.querySelector('#new_password, #registerPassword');
-            const confirm = form.querySelector('#confirm_password, #registerPassword2');
-            
-            if (password && confirm && password.value !== confirm.value) {
-                confirm.setCustomValidity('Passwords do not match');
-                event.preventDefault();
-                event.stopPropagation();
-            } else if (confirm) {
-                confirm.setCustomValidity('');
-            }
-            
             form.classList.add('was-validated');
         }, false);
-    });
-    
-    // Add password confirmation check on input
-    const passwordConfirmations = document.querySelectorAll('#confirm_password, #registerPassword2');
-    passwordConfirmations.forEach(confirm => {
-        confirm.addEventListener('input', function() {
-            const password = document.querySelector('#new_password, #registerPassword');
-            if (password && this.value !== password.value) {
-                this.setCustomValidity('Passwords do not match');
-            } else {
-                this.setCustomValidity('');
-            }
-        });
     });
 }
 
@@ -65,22 +31,22 @@ function initFormValidation() {
  * Initialize password toggle functionality
  */
 function initPasswordToggle() {
-    const toggleButtons = document.querySelectorAll('.toggle-password');
+    const toggles = document.querySelectorAll('.toggle-password');
     
-    toggleButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const passwordField = this.previousElementSibling;
-            const icon = this.querySelector('i');
+    toggles.forEach(toggle => {
+        toggle.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const target = document.getElementById(targetId);
             
             // Toggle password visibility
-            if (passwordField.type === 'password') {
-                passwordField.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
+            if (target.type === 'password') {
+                target.type = 'text';
+                this.querySelector('i').classList.remove('fa-eye');
+                this.querySelector('i').classList.add('fa-eye-slash');
             } else {
-                passwordField.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
+                target.type = 'password';
+                this.querySelector('i').classList.remove('fa-eye-slash');
+                this.querySelector('i').classList.add('fa-eye');
             }
         });
     });
@@ -90,13 +56,13 @@ function initPasswordToggle() {
  * Initialize Bootstrap components like tooltips and popovers
  */
 function initBootstrapComponents() {
-    // Initialize tooltips
+    // Activate tooltips
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
     
-    // Initialize popovers
+    // Activate popovers
     const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
     popoverTriggerList.map(function (popoverTriggerEl) {
         return new bootstrap.Popover(popoverTriggerEl);
@@ -107,90 +73,8 @@ function initBootstrapComponents() {
  * Initialize charts if they exist on the page
  */
 function initCharts() {
-    // Lab attendance chart (teacher dashboard)
-    const labChartElement = document.getElementById('labAttendanceChart');
-    if (labChartElement && typeof labAttendanceData !== 'undefined') {
-        new Chart(labChartElement, {
-            type: 'bar',
-            data: {
-                labels: labAttendanceData.labs,
-                datasets: [{
-                    label: 'Attendance Count',
-                    data: labAttendanceData.counts,
-                    backgroundColor: 'rgba(13, 110, 253, 0.7)',
-                    borderColor: 'rgba(13, 110, 253, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Number of Attendances'
-                        },
-                        ticks: {
-                            precision: 0
-                        }
-                    },
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Labs'
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Student attendance chart (student details)
-    const studentChartElement = document.getElementById('studentAttendanceChart');
-    if (studentChartElement && typeof getAttendanceByLab === 'function') {
-        const attendanceData = getAttendanceByLab();
-        new Chart(studentChartElement, {
-            type: 'pie',
-            data: {
-                labels: attendanceData.labs,
-                datasets: [{
-                    data: attendanceData.counts,
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.7)',
-                        'rgba(54, 162, 235, 0.7)',
-                        'rgba(255, 206, 86, 0.7)',
-                        'rgba(75, 192, 192, 0.7)',
-                        'rgba(153, 102, 255, 0.7)',
-                        'rgba(255, 159, 64, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(255, 99, 132, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 206, 86, 1)',
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(153, 102, 255, 1)',
-                        'rgba(255, 159, 64, 1)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    },
-                    title: {
-                        display: true,
-                        text: 'Attendance Distribution by Lab'
-                    }
-                }
-            }
-        });
-    }
+    // Charts will be initialized in more specific JS files
+    // This is just a placeholder in case we need global chart initialization
 }
 
 /**
@@ -200,7 +84,7 @@ function initCharts() {
  */
 function formatDate(date) {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(date).toLocaleDateString(undefined, options);
+    return new Date(date).toLocaleDateString('en-US', options);
 }
 
 /**
@@ -211,6 +95,10 @@ function formatDate(date) {
 function toggleVisibility(selector, visible) {
     const element = document.querySelector(selector);
     if (element) {
-        element.classList.toggle('d-none', !visible);
+        if (visible) {
+            element.classList.remove('d-none');
+        } else {
+            element.classList.add('d-none');
+        }
     }
 }
