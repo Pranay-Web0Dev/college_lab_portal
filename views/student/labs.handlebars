@@ -1,0 +1,130 @@
+<div class="container mt-4">
+    <h1 class="mb-4">{{title}}</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">Available Labs and Sessions</h4>
+        </div>
+        <div class="card-body">
+            {{#if labs.length}}
+                <div class="alert alert-info mb-4">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Select a lab session and click the "Mark Attendance" button to record your attendance.
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <select class="form-select" id="labFilter">
+                            <option value="all" selected>All Labs</option>
+                            {{#each labs}}
+                                <option value="lab-{{id}}">{{name}}</option>
+                            {{/each}}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="accordion" id="labsAccordion">
+                    {{#each labs}}
+                        <div class="accordion-item lab-item" data-lab-id="lab-{{id}}">
+                            <h2 class="accordion-header" id="heading-{{id}}">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#collapse-{{id}}" aria-expanded="false" aria-controls="collapse-{{id}}">
+                                    <strong>{{name}}</strong> - {{location}} (Capacity: {{capacity}})
+                                </button>
+                            </h2>
+                            <div id="collapse-{{id}}" class="accordion-collapse collapse" 
+                                 aria-labelledby="heading-{{id}}" data-bs-parent="#labsAccordion">
+                                <div class="accordion-body">
+                                    {{#if description}}
+                                        <p class="text-muted mb-3">{{description}}</p>
+                                    {{/if}}
+                                    
+                                    {{#if sessions.length}}
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Session Name</th>
+                                                        <th>Day</th>
+                                                        <th>Time</th>
+                                                        <th>Max Students</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {{#each sessions}}
+                                                        <tr>
+                                                            <td>{{name}}</td>
+                                                            <td>{{day_of_week}}</td>
+                                                            <td>{{start_time}} - {{end_time}}</td>
+                                                            <td>{{max_students}}</td>
+                                                            <td>
+                                                                <form action="/student/mark-attendance" method="POST" class="d-inline">
+                                                                    <input type="hidden" name="labId" value="{{../id}}">
+                                                                    <input type="hidden" name="labSessionId" value="{{id}}">
+                                                                    <button type="submit" class="btn btn-success btn-sm">
+                                                                        <i class="fas fa-check-circle"></i> Mark Attendance
+                                                                    </button>
+                                                                </form>
+                                                            </td>
+                                                        </tr>
+                                                    {{/each}}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    {{else}}
+                                        <div class="alert alert-warning">
+                                            No sessions scheduled for this lab.
+                                        </div>
+                                    {{/if}}
+                                </div>
+                            </div>
+                        </div>
+                    {{/each}}
+                </div>
+            {{else}}
+                <div class="alert alert-info">
+                    No labs available at this time. Please check back later.
+                </div>
+            {{/if}}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Lab filtering functionality
+    const labFilter = document.getElementById('labFilter');
+    const labItems = document.querySelectorAll('.lab-item');
+    
+    if (labFilter) {
+        labFilter.addEventListener('change', function() {
+            const selectedValue = this.value;
+            
+            if (selectedValue === 'all') {
+                labItems.forEach(item => {
+                    item.style.display = 'block';
+                });
+            } else {
+                labItems.forEach(item => {
+                    if (item.getAttribute('data-lab-id') === selectedValue) {
+                        item.style.display = 'block';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            }
+        });
+    }
+    
+    // Confirmation for marking attendance
+    const attendanceForms = document.querySelectorAll('form[action="/student/mark-attendance"]');
+    attendanceForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            if (!confirm('Are you sure you want to mark your attendance for this session?')) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>

@@ -1,0 +1,119 @@
+<div class="container mt-4">
+    <h1 class="mb-4">{{title}}</h1>
+    
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/teacher/dashboard">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="/teacher/attendance">All Attendance</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Session Attendance</li>
+        </ol>
+    </nav>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">Session Details</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Session Name:</strong> {{session.name}}</p>
+                    <p><strong>Day of Week:</strong> {{session.day_of_week}}</p>
+                    <p><strong>Time:</strong> {{session.start_time}} - {{session.end_time}}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Lab:</strong> {{lab.name}}</p>
+                    <p><strong>Location:</strong> {{lab.location}}</p>
+                    <p><strong>Max Students:</strong> {{session.max_students}}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Attendance Records</h4>
+            <button class="btn btn-primary" onclick="exportTableToCSV('attendanceTable', 'session_attendance.csv')">
+                <i class="fas fa-download"></i> Export to CSV
+            </button>
+        </div>
+        <div class="card-body">
+            {{#if attendance.length}}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="attendanceTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Student Name</th>
+                                <th>Student ID</th>
+                                <th>Email</th>
+                                <th>Date & Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{#each attendance}}
+                                <tr>
+                                    <td>{{id}}</td>
+                                    <td>{{student_name}}</td>
+                                    <td>{{student_id}}</td>
+                                    <td>{{email}}</td>
+                                    <td>{{formatDate date}}</td>
+                                </tr>
+                            {{/each}}
+                        </tbody>
+                    </table>
+                </div>
+            {{else}}
+                <div class="alert alert-info">
+                    No attendance records found for this lab session.
+                </div>
+            {{/if}}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize DataTable for better searching and pagination
+    if (document.getElementById('attendanceTable')) {
+        $('#attendanceTable').DataTable({
+            order: [[4, 'desc']], // Sort by date descending
+        });
+    }
+});
+
+// Export table to CSV function
+function exportTableToCSV(tableId, filename) {
+    const table = document.getElementById(tableId);
+    let csv = [];
+    const rows = table.querySelectorAll('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = [], cols = rows[i].querySelectorAll('td, th');
+        
+        for (let j = 0; j < cols.length; j++) {
+            // Replace any commas in the cell with a space to avoid CSV format issues
+            let text = cols[j].innerText.replace(/,/g, ' ');
+            // Wrap in quotes to handle special characters
+            row.push('"' + text + '"');
+        }
+        
+        csv.push(row.join(','));
+    }
+    
+    // Download CSV file
+    downloadCSV(csv.join('\n'), filename);
+}
+
+function downloadCSV(csv, filename) {
+    const csvFile = new Blob([csv], {type: 'text/csv'});
+    const downloadLink = document.createElement('a');
+    
+    // Create a download link and trigger it
+    downloadLink.download = filename;
+    downloadLink.href = window.URL.createObjectURL(csvFile);
+    downloadLink.style.display = 'none';
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+}
+</script>

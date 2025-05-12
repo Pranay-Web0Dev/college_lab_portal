@@ -1,0 +1,264 @@
+<div class="container mt-4">
+    <h1 class="mb-4">{{title}}</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Manage Lab Sessions</h5>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSessionModal">
+                <i class="fas fa-plus"></i> Add New Session
+            </button>
+        </div>
+        <div class="card-body">
+            {{#if sessions.length}}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="sessionsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Lab</th>
+                                <th>Day</th>
+                                <th>Time</th>
+                                <th>Max Students</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{#each sessions}}
+                                <tr>
+                                    <td>{{id}}</td>
+                                    <td>{{name}}</td>
+                                    <td>{{lab_name}}</td>
+                                    <td>{{day_of_week}}</td>
+                                    <td>{{start_time}} - {{end_time}}</td>
+                                    <td>{{max_students}}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-info btn-sm edit-session-btn" 
+                                                data-session-id="{{id}}"
+                                                data-session-name="{{name}}"
+                                                data-session-day="{{day_of_week}}"
+                                                data-session-start="{{start_time}}"
+                                                data-session-end="{{end_time}}"
+                                                data-session-max="{{max_students}}"
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#editSessionModal">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-sm delete-session-btn" 
+                                                data-session-id="{{id}}"
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#deleteSessionModal">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {{/each}}
+                        </tbody>
+                    </table>
+                </div>
+            {{else}}
+                <div class="alert alert-info">
+                    No lab sessions found. Add your first lab session above.
+                </div>
+            {{/if}}
+        </div>
+    </div>
+</div>
+
+<!-- Add Session Modal -->
+<div class="modal fade" id="addSessionModal" tabindex="-1" aria-labelledby="addSessionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="/teacher/sessions/add" method="POST" class="needs-validation" novalidate>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addSessionModalLabel">Add New Lab Session</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="labId" class="form-label">Lab</label>
+                        <select class="form-select" id="labId" name="labId" required>
+                            <option value="" selected disabled>Select Lab</option>
+                            {{#each labs}}
+                                <option value="{{id}}">{{name}} ({{location}})</option>
+                            {{/each}}
+                        </select>
+                        <div class="invalid-feedback">Please select a lab</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Session Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                        <div class="invalid-feedback">Please enter a session name</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="dayOfWeek" class="form-label">Day of Week</label>
+                        <select class="form-select" id="dayOfWeek" name="dayOfWeek" required>
+                            <option value="" selected disabled>Select Day</option>
+                            <option value="Monday">Monday</option>
+                            <option value="Tuesday">Tuesday</option>
+                            <option value="Wednesday">Wednesday</option>
+                            <option value="Thursday">Thursday</option>
+                            <option value="Friday">Friday</option>
+                            <option value="Saturday">Saturday</option>
+                            <option value="Sunday">Sunday</option>
+                        </select>
+                        <div class="invalid-feedback">Please select a day</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="startTime" class="form-label">Start Time</label>
+                            <input type="time" class="form-control" id="startTime" name="startTime" required>
+                            <div class="invalid-feedback">Please enter a start time</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="endTime" class="form-label">End Time</label>
+                            <input type="time" class="form-control" id="endTime" name="endTime" required>
+                            <div class="invalid-feedback">Please enter an end time</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="maxStudents" class="form-label">Maximum Students</label>
+                        <input type="number" class="form-control" id="maxStudents" name="maxStudents" min="1" required>
+                        <div class="invalid-feedback">Please enter a valid number of maximum students</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Session</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Session Modal -->
+<div class="modal fade" id="editSessionModal" tabindex="-1" aria-labelledby="editSessionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="editSessionForm" action="/teacher/sessions/edit/" method="POST" class="needs-validation" novalidate>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editSessionModalLabel">Edit Lab Session</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editName" class="form-label">Session Name</label>
+                        <input type="text" class="form-control" id="editName" name="name" required>
+                        <div class="invalid-feedback">Please enter a session name</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editDayOfWeek" class="form-label">Day of Week</label>
+                        <select class="form-select" id="editDayOfWeek" name="dayOfWeek" required>
+                            <option value="" disabled>Select Day</option>
+                            <option value="Monday">Monday</option>
+                            <option value="Tuesday">Tuesday</option>
+                            <option value="Wednesday">Wednesday</option>
+                            <option value="Thursday">Thursday</option>
+                            <option value="Friday">Friday</option>
+                            <option value="Saturday">Saturday</option>
+                            <option value="Sunday">Sunday</option>
+                        </select>
+                        <div class="invalid-feedback">Please select a day</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editStartTime" class="form-label">Start Time</label>
+                            <input type="time" class="form-control" id="editStartTime" name="startTime" required>
+                            <div class="invalid-feedback">Please enter a start time</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="editEndTime" class="form-label">End Time</label>
+                            <input type="time" class="form-control" id="editEndTime" name="endTime" required>
+                            <div class="invalid-feedback">Please enter an end time</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editMaxStudents" class="form-label">Maximum Students</label>
+                        <input type="number" class="form-control" id="editMaxStudents" name="maxStudents" min="1" required>
+                        <div class="invalid-feedback">Please enter a valid number of maximum students</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Session Modal -->
+<div class="modal fade" id="deleteSessionModal" tabindex="-1" aria-labelledby="deleteSessionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="deleteSessionForm" action="/teacher/sessions/delete/" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteSessionModalLabel">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this lab session? This action cannot be undone.</p>
+                    <p>Note: Sessions with existing attendance records cannot be deleted.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize DataTable for better searching and pagination
+    if (document.getElementById('sessionsTable')) {
+        $('#sessionsTable').DataTable({
+            order: [[3, 'asc'], [4, 'asc']], // Sort by day, then time
+            columnDefs: [
+                { orderable: false, targets: 6 } // Disable sorting on action column
+            ]
+        });
+    }
+    
+    // Set up edit session form
+    const editButtons = document.querySelectorAll('.edit-session-btn');
+    editButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const sessionId = this.getAttribute('data-session-id');
+            const sessionName = this.getAttribute('data-session-name');
+            const sessionDay = this.getAttribute('data-session-day');
+            const sessionStart = this.getAttribute('data-session-start');
+            const sessionEnd = this.getAttribute('data-session-end');
+            const sessionMax = this.getAttribute('data-session-max');
+            
+            document.getElementById('editSessionForm').action = `/teacher/sessions/edit/${sessionId}`;
+            document.getElementById('editName').value = sessionName;
+            document.getElementById('editDayOfWeek').value = sessionDay;
+            document.getElementById('editStartTime').value = sessionStart;
+            document.getElementById('editEndTime').value = sessionEnd;
+            document.getElementById('editMaxStudents').value = sessionMax;
+        });
+    });
+    
+    // Set up delete session form
+    const deleteButtons = document.querySelectorAll('.delete-session-btn');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const sessionId = this.getAttribute('data-session-id');
+            document.getElementById('deleteSessionForm').action = `/teacher/sessions/delete/${sessionId}`;
+        });
+    });
+});
+</script>
