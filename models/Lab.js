@@ -33,7 +33,7 @@ class Lab {
     static async getAll() {
         try {
             const query = 'SELECT * FROM labs ORDER BY name';
-            return await db.query(query);
+            return await dbModule.query(query);
         } catch (error) {
             console.error('Error getting all labs:', error.message);
             throw error;
@@ -48,7 +48,7 @@ class Lab {
     static async getById(id) {
         try {
             const query = 'SELECT * FROM labs WHERE id = $1';
-            const result = await db.query(query, [id]);
+            const result = await dbModule.query(query, [id]);
             
             return result.length > 0 ? result[0] : null;
         } catch (error) {

@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const dbModule = require('../config/database');
 
 class Attendance {
     /**
@@ -16,7 +16,7 @@ class Attendance {
                 WHERE user_id = $1 AND lab_session_id = $2 AND DATE(date) = CURRENT_DATE
             `;
             
-            const checkResult = await db.query(checkQuery, [user_id, lab_session_id]);
+            const checkResult = await dbModule.query(checkQuery, [user_id, lab_session_id]);
             
             if (checkResult.length > 0) {
                 throw new Error('Attendance already marked for this session today');
@@ -28,7 +28,7 @@ class Attendance {
                 RETURNING *
             `;
             
-            const result = await db.query(insertQuery, [user_id, lab_id, lab_session_id]);
+            const result = await dbModule.query(insertQuery, [user_id, lab_id, lab_session_id]);
             
             return result[0];
         } catch (error) {
@@ -54,7 +54,7 @@ class Attendance {
                 ORDER BY a.date DESC
             `;
             
-            return await db.query(query, [userId]);
+            return await dbModule.query(query, [userId]);
         } catch (error) {
             console.error('Error getting attendance by user ID:', error.message);
             throw error;
@@ -70,7 +70,7 @@ class Attendance {
     static async delete(id, userId) {
         try {
             const query = 'DELETE FROM attendance WHERE id = $1 AND user_id = $2 RETURNING id';
-            const result = await db.query(query, [id, userId]);
+            const result = await dbModule.query(query, [id, userId]);
             
             return result.length > 0;
         } catch (error) {
@@ -94,7 +94,7 @@ class Attendance {
                 ORDER BY a.date DESC
             `;
             
-            return await db.query(query, [labSessionId]);
+            return await dbModule.query(query, [labSessionId]);
         } catch (error) {
             console.error('Error getting attendance by lab session ID:', error.message);
             throw error;
@@ -118,7 +118,7 @@ class Attendance {
                 WHERE DATE(date) BETWEEN $1 AND $2
             `;
             
-            const result = await db.query(query, [startDate, endDate]);
+            const result = await dbModule.query(query, [startDate, endDate]);
             
             return {
                 totalAttendance: parseInt(result[0].total_attendance),
@@ -151,7 +151,7 @@ class Attendance {
                 query += ` LIMIT ${limit}`;
             }
             
-            return await db.query(query);
+            return await dbModule.query(query);
         } catch (error) {
             console.error('Error getting all attendance records:', error.message);
             throw error;

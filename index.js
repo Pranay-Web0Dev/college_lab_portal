@@ -4,7 +4,7 @@ const exphbs = require('express-handlebars');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
-const db = require('./config/database');
+const dbModule = require('./config/database');
 
 // Load environment variables
 dotenv.config();
