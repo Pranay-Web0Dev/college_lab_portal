@@ -13,12 +13,16 @@ router.use(ensureTeacher);
 // Teacher Dashboard
 router.get('/dashboard', async (req, res) => {
     try {
+        // Get the teacher's subject for filtering
+        const teacherSubject = req.session.user.subject || null;
+        
         // Get statistics for dashboard
         const stats = {
             totalStudents: await User.getAllStudents().then(students => students.length),
             totalLabs: await Lab.getAll().then(labs => labs.length),
             totalSessions: await LabSession.getAll().then(sessions => sessions.length),
-            todayAttendance: 0 // Initialize with default
+            todayAttendance: 0, // Initialize with default
+            pendingApprovals: 0 // Initialize pending approvals count
         };
         
         // Get today's date in the format YYYY-MM-DD
@@ -30,6 +34,10 @@ router.get('/dashboard', async (req, res) => {
         
         stats.todayAttendance = todayAttendanceCount;
         
+        // Get pending approvals count
+        const pendingApprovals = await Attendance.getPendingApprovals(teacherSubject);
+        stats.pendingApprovals = pendingApprovals.length;
+        
         // Get recent attendance records (limited to 10 for dashboard)
         const recentAttendance = await Attendance.getAll(10);
         
@@ -40,7 +48,8 @@ router.get('/dashboard', async (req, res) => {
             title: 'Teacher Dashboard',
             stats,
             recentAttendance,
-            todaySessions
+            todaySessions,
+            subjectFilter: teacherSubject
         });
     } catch (error) {
         console.error('Error in teacher dashboard:', error);
