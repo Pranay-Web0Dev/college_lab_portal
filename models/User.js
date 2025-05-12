@@ -102,7 +102,7 @@ class User {
      */
     static async update(id, userData) {
         try {
-            const allowedFields = ['name', 'email', 'student_id'];
+            const allowedFields = ['name', 'email', 'student_id', 'subject'];
             const fields = [];
             const values = [];
             let paramCount = 1;

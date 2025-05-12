@@ -301,6 +301,108 @@ router.get('/attendance/session/:id', async (req, res) => {
     }
 });
 
+// Profile Page
+router.get('/profile', async (req, res) => {
+    try {
+        const user = await User.getById(req.session.user.id);
+        
+        res.render('teacher/profile', {
+            title: 'My Profile',
+            formData: {
+                name: user.name,
+                email: user.email,
+                subject: user.subject || ''
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching user profile:', error);
+        req.session.error_msg = 'Error loading profile data';
+        res.redirect('/teacher/dashboard');
+    }
+});
+
+// Update Profile
+router.post('/profile/update', async (req, res) => {
+    try {
+        const { name, email, subject } = req.body;
+        
+        // Simple validation
+        if (!name || !email) {
+            req.session.error_msg = 'Please fill in all required fields';
+            return res.redirect('/teacher/profile');
+        }
+        
+        // Check if email is already used by another user
+        const existingUser = await User.getByEmail(email);
+        if (existingUser && existingUser.id !== req.session.user.id) {
+            req.session.error_msg = 'Email is already in use by another account';
+            return res.redirect('/teacher/profile');
+        }
+        
+        // Update user data
+        const userData = { name, email, subject };
+        const success = await User.update(req.session.user.id, userData);
+        
+        if (success) {
+            // Update session data
+            req.session.user = {
+                ...req.session.user,
+                name,
+                email,
+                subject
+            };
+            
+            req.session.success_msg = 'Profile updated successfully';
+        } else {
+            req.session.error_msg = 'Unable to update profile';
+        }
+        
+        res.redirect('/teacher/profile');
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        req.session.error_msg = 'Error updating profile: ' + error.message;
+        res.redirect('/teacher/profile');
+    }
+});
+
+// Change Password
+router.post('/profile/change-password', async (req, res) => {
+    try {
+        const { current_password, new_password, confirm_password } = req.body;
+        
+        // Simple validation
+        if (!current_password || !new_password || !confirm_password) {
+            req.session.error_msg = 'Please fill in all password fields';
+            return res.redirect('/teacher/profile');
+        }
+        
+        if (new_password.length < 6) {
+            req.session.error_msg = 'New password must be at least 6 characters';
+            return res.redirect('/teacher/profile');
+        }
+        
+        if (new_password !== confirm_password) {
+            req.session.error_msg = 'New passwords do not match';
+            return res.redirect('/teacher/profile');
+        }
+        
+        // Attempt to change password
+        const success = await User.changePassword(req.session.user.id, current_password, new_password);
+        
+        if (success) {
+            req.session.success_msg = 'Password changed successfully';
+        } else {
+            req.session.error_msg = 'Current password is incorrect';
+        }
+        
+        res.redirect('/teacher/profile');
+    } catch (error) {
+        console.error('Error changing password:', error);
+        req.session.error_msg = 'Error changing password: ' + error.message;
+        res.redirect('/teacher/profile');
+    }
+});
+
 // Helper function to get current day of the week
 function getCurrentDay() {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];

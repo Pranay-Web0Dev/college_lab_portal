@@ -1,0 +1,141 @@
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12 mb-4">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/teacher/dashboard">Dashboard</a></li>
+                    <li class="breadcrumb-item active">My Profile</li>
+                </ol>
+            </nav>
+            <h2 class="mb-4"><i class="fas fa-user-circle me-2"></i>My Profile</h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- User Info Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body text-center py-5">
+                    <div class="display-1 text-primary mb-3">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                    </div>
+                    <h4>{{user.name}}</h4>
+                    <p class="text-muted mb-2">
+                        <i class="fas fa-envelope me-2"></i>{{user.email}}
+                    </p>
+                    <div class="badge bg-primary mb-3">
+                        <i class="fas fa-chalkboard-teacher me-1"></i> Teacher
+                    </div>
+                    
+                    {{#if user.subject}}
+                    <p class="mb-0">
+                        <span class="fw-bold">Subject:</span> {{user.subject}}
+                    </p>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit Profile -->
+        <div class="col-md-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Edit Profile</h5>
+                </div>
+                <div class="card-body">
+                    <form action="/teacher/profile/update" method="POST" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{formData.name}}" required>
+                            <div class="invalid-feedback">
+                                Please enter your full name.
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{formData.email}}" required>
+                            <div class="invalid-feedback">
+                                Please enter a valid email address.
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="subject" class="form-label">Subject</label>
+                            <input type="text" class="form-control" id="subject" name="subject" value="{{formData.subject}}">
+                            <div class="form-text">Enter the subject you teach (optional).</div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Save Changes
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Change Password -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-key me-2"></i>Change Password</h5>
+                </div>
+                <div class="card-body">
+                    <form action="/teacher/profile/change-password" method="POST" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="current_password" class="form-label">Current Password</label>
+                            <input type="password" class="form-control" id="current_password" name="current_password" required>
+                            <div class="invalid-feedback">
+                                Please enter your current password.
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="new_password" class="form-label">New Password</label>
+                            <input type="password" class="form-control" id="new_password" name="new_password" required minlength="6">
+                            <div class="invalid-feedback">
+                                New password must be at least 6 characters.
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="confirm_password" class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                            <div class="invalid-feedback">
+                                Passwords do not match.
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-key me-2"></i>Change Password
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Password confirmation validation
+    const newPassword = document.getElementById('new_password');
+    const confirmPassword = document.getElementById('confirm_password');
+    
+    if (newPassword && confirmPassword) {
+        confirmPassword.addEventListener('input', function() {
+            if (this.value !== newPassword.value) {
+                this.setCustomValidity('Passwords do not match');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+        
+        newPassword.addEventListener('input', function() {
+            if (confirmPassword.value && this.value !== confirmPassword.value) {
+                confirmPassword.setCustomValidity('Passwords do not match');
+            } else {
+                confirmPassword.setCustomValidity('');
+            }
+        });
+    }
+});
+</script>

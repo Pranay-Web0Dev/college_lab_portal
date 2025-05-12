@@ -42,10 +42,13 @@
                         <i class="fas fa-user me-1"></i> {{user.name}}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                        <li><a class="dropdown-item" href="/profile"><i class="fas fa-id-card me-1"></i> Profile</a></li>
-                        <li><a class="dropdown-item" href="/change-password"><i class="fas fa-key me-1"></i> Change Password</a></li>
+                        {{#ifEquals user.role "student"}}
+                            <li><a class="dropdown-item" href="/student/profile"><i class="fas fa-id-card me-1"></i> Profile</a></li>
+                        {{else}}
+                            <li><a class="dropdown-item" href="/teacher/profile"><i class="fas fa-id-card me-1"></i> Profile</a></li>
+                        {{/ifEquals}}
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="/logout"><i class="fas fa-sign-out-alt me-1"></i> Logout</a></li>
+                        <li><a class="dropdown-item" href="/auth/logout"><i class="fas fa-sign-out-alt me-1"></i> Logout</a></li>
                     </ul>
                 </li>
             </ul>
