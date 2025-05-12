@@ -1,18 +1,10 @@
 /**
  * Student-specific JavaScript functionalities
  */
-
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize session filtering on attendance page
     initLabSessionFilter();
-    
-    // Initialize date formatting
     formatDateElements();
-    
-    // Initialize confirmation dialogs
     initConfirmationDialogs();
-    
-    // Initialize attendance chart if on dashboard
     initAttendanceDonutChart();
 });
 
@@ -20,33 +12,21 @@ document.addEventListener('DOMContentLoaded', function() {
  * Initialize filtering of lab sessions based on selected lab
  */
 function initLabSessionFilter() {
-    const labSelect = document.getElementById('lab_id');
-    const sessionSelect = document.getElementById('lab_session_id');
+    const labFilter = document.getElementById('labFilter');
     
-    if (labSelect && sessionSelect) {
-        labSelect.addEventListener('change', function() {
+    if (labFilter) {
+        labFilter.addEventListener('change', function() {
             const selectedLabId = this.value;
+            const labSessions = document.querySelectorAll('.lab-session-container');
             
-            // Reset session dropdown
-            sessionSelect.innerHTML = '<option value="" selected disabled>Choose a session</option>';
-            
-            // Get all session options that match the selected lab
-            const sessions = document.querySelectorAll('#lab_session_id option[data-lab]');
-            sessions.forEach(option => {
-                if (option.dataset.lab === selectedLabId) {
-                    const clonedOption = option.cloneNode(true);
-                    sessionSelect.appendChild(clonedOption);
+            labSessions.forEach(session => {
+                if (selectedLabId === 'all' || session.getAttribute('data-lab-id') === selectedLabId) {
+                    session.style.display = 'block';
+                } else {
+                    session.style.display = 'none';
                 }
             });
-            
-            // Enable/disable session dropdown
-            sessionSelect.disabled = selectedLabId === "";
         });
-        
-        // Initial trigger to set the correct sessions
-        if (labSelect.value !== "") {
-            labSelect.dispatchEvent(new Event('change'));
-        }
     }
 }
 
@@ -56,12 +36,10 @@ function initLabSessionFilter() {
 function formatDateElements() {
     const dateElements = document.querySelectorAll('.format-date');
     
-    dateElements.forEach(el => {
-        const dateString = el.textContent.trim();
-        const date = new Date(dateString);
-        
-        if (!isNaN(date.getTime())) {
-            el.textContent = formatDate(date);
+    dateElements.forEach(element => {
+        const date = new Date(element.textContent);
+        if (!isNaN(date)) {
+            element.textContent = formatDate(date);
         }
     });
 }
@@ -70,12 +48,13 @@ function formatDateElements() {
  * Initialize confirmation dialogs
  */
 function initConfirmationDialogs() {
-    const deleteButtons = document.querySelectorAll('.confirm-delete');
+    const confirmButtons = document.querySelectorAll('[data-confirm]');
     
-    deleteButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
-                e.preventDefault();
+    confirmButtons.forEach(button => {
+        button.addEventListener('click', function(event) {
+            const message = this.getAttribute('data-confirm');
+            if (!confirm(message)) {
+                event.preventDefault();
             }
         });
     });
@@ -85,26 +64,22 @@ function initConfirmationDialogs() {
  * Initialize donut chart for student dashboard
  */
 function initAttendanceDonutChart() {
-    const chartElement = document.getElementById('attendanceDonutChart');
+    const chartCanvas = document.getElementById('attendanceChart');
     
-    if (chartElement && typeof studentAttendanceData !== 'undefined') {
-        new Chart(chartElement, {
+    if (chartCanvas) {
+        // Get attendance data from a data attribute or other source
+        const attendedCount = parseInt(chartCanvas.getAttribute('data-attended') || 0);
+        const totalCount = parseInt(chartCanvas.getAttribute('data-total') || 0);
+        const missedCount = totalCount - attendedCount;
+        
+        // Create the chart
+        new Chart(chartCanvas, {
             type: 'doughnut',
             data: {
-                labels: ['Present', 'Absent'],
+                labels: ['Attended', 'Missed'],
                 datasets: [{
-                    data: [
-                        studentAttendanceData.present,
-                        studentAttendanceData.total - studentAttendanceData.present
-                    ],
-                    backgroundColor: [
-                        'rgba(40, 167, 69, 0.7)',
-                        'rgba(220, 53, 69, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(40, 167, 69, 1)',
-                        'rgba(220, 53, 69, 1)'
-                    ],
+                    data: [attendedCount, missedCount],
+                    backgroundColor: ['#28a745', '#dc3545'],
                     borderWidth: 1
                 }]
             },
@@ -116,9 +91,15 @@ function initAttendanceDonutChart() {
                     legend: {
                         position: 'bottom'
                     },
-                    title: {
-                        display: true,
-                        text: 'This Month\'s Attendance'
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const percentage = totalCount > 0 ? Math.round((value / totalCount) * 100) : 0;
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
                     }
                 }
             }
@@ -132,19 +113,23 @@ function initAttendanceDonutChart() {
  * @param {string} type - Type of notification (success, danger, warning, info)
  */
 function showNotification(message, type = 'info') {
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = `alert alert-${type} alert-dismissible fade show notification-toast`;
-    notification.innerHTML = `
+    const alertContainer = document.createElement('div');
+    alertContainer.className = `alert alert-${type} alert-dismissible fade show fixed-top mx-auto mt-3`;
+    alertContainer.style.maxWidth = '500px';
+    alertContainer.style.zIndex = '9999';
+    
+    alertContainer.innerHTML = `
         ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     `;
     
-    // Add to document
-    document.body.appendChild(notification);
+    document.body.appendChild(alertContainer);
     
     // Auto remove after 5 seconds
     setTimeout(() => {
-        notification.remove();
+        alertContainer.classList.remove('show');
+        setTimeout(() => {
+            document.body.removeChild(alertContainer);
+        }, 150);
     }, 5000);
 }

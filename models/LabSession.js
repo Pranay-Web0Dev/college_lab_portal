@@ -7,67 +7,44 @@ class LabSession {
      * @returns {Promise<object>} - Created lab session
      */
     static async create(sessionData) {
-        const { lab_id, name, day_of_week, start_time, end_time, max_students } = sessionData;
-        
         try {
-            // Check if lab exists
-            const [lab] = await db.query('SELECT * FROM labs WHERE id = ?', [lab_id]);
+            const { lab_id, name, day_of_week, start_time, end_time, max_students } = sessionData;
             
-            if (!lab) {
-                throw new Error('Lab not found');
-            }
+            const query = `
+                INSERT INTO lab_sessions (lab_id, name, day_of_week, start_time, end_time, max_students)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING *
+            `;
             
-            // Check for time conflicts
-            const conflicts = await db.query(`
-                SELECT * FROM lab_sessions 
-                WHERE lab_id = ? 
-                AND day_of_week = ? 
-                AND ((start_time <= ? AND end_time > ?) OR (start_time < ? AND end_time >= ?) OR (start_time >= ? AND end_time <= ?))
-            `, [lab_id, day_of_week, start_time, start_time, end_time, end_time, start_time, end_time]);
+            const values = [lab_id, name, day_of_week, start_time, end_time, max_students];
+            const result = await db.query(query, values);
             
-            if (conflicts.length > 0) {
-                throw new Error('Time conflict with another lab session');
-            }
-            
-            // Create lab session
-            const result = await db.query(
-                'INSERT INTO lab_sessions (lab_id, name, day_of_week, start_time, end_time, max_students) VALUES (?, ?, ?, ?, ?, ?)',
-                [lab_id, name, day_of_week, start_time, end_time, max_students]
-            );
-            
-            return {
-                id: result.insertId,
-                lab_id,
-                name,
-                day_of_week,
-                start_time,
-                end_time,
-                max_students
-            };
+            return result[0];
         } catch (error) {
             console.error('Error creating lab session:', error.message);
             throw error;
         }
     }
-    
+
     /**
      * Get all lab sessions
      * @returns {Promise<Array>} - Array of lab sessions with lab info
      */
     static async getAll() {
         try {
-            return await db.query(`
-                SELECT ls.*, l.name as lab_name, l.location
+            const query = `
+                SELECT ls.*, l.name AS lab_name
                 FROM lab_sessions ls
                 JOIN labs l ON ls.lab_id = l.id
                 ORDER BY ls.day_of_week, ls.start_time
-            `);
+            `;
+            return await db.query(query);
         } catch (error) {
             console.error('Error getting all lab sessions:', error.message);
             throw error;
         }
     }
-    
+
     /**
      * Get lab sessions by lab ID
      * @param {number} labId - Lab ID
@@ -75,19 +52,18 @@ class LabSession {
      */
     static async getByLabId(labId) {
         try {
-            return await db.query(`
-                SELECT ls.*, l.name as lab_name, l.location
-                FROM lab_sessions ls
-                JOIN labs l ON ls.lab_id = l.id
-                WHERE ls.lab_id = ?
-                ORDER BY ls.day_of_week, ls.start_time
-            `, [labId]);
+            const query = `
+                SELECT * FROM lab_sessions
+                WHERE lab_id = $1
+                ORDER BY day_of_week, start_time
+            `;
+            return await db.query(query, [labId]);
         } catch (error) {
             console.error('Error getting lab sessions by lab ID:', error.message);
             throw error;
         }
     }
-    
+
     /**
      * Get lab session by ID
      * @param {number} id - Lab session ID
@@ -95,20 +71,21 @@ class LabSession {
      */
     static async getById(id) {
         try {
-            const [session] = await db.query(`
-                SELECT ls.*, l.name as lab_name, l.location, l.capacity
+            const query = `
+                SELECT ls.*, l.name AS lab_name
                 FROM lab_sessions ls
                 JOIN labs l ON ls.lab_id = l.id
-                WHERE ls.id = ?
-            `, [id]);
+                WHERE ls.id = $1
+            `;
+            const result = await db.query(query, [id]);
             
-            return session || null;
+            return result.length > 0 ? result[0] : null;
         } catch (error) {
             console.error('Error getting lab session by ID:', error.message);
             throw error;
         }
     }
-    
+
     /**
      * Update a lab session
      * @param {number} id - Lab session ID
@@ -116,49 +93,26 @@ class LabSession {
      * @returns {Promise<boolean>} - Success status
      */
     static async update(id, sessionData) {
-        const { lab_id, name, day_of_week, start_time, end_time, max_students } = sessionData;
-        
         try {
-            // Check if lab session exists
-            const [session] = await db.query('SELECT * FROM lab_sessions WHERE id = ?', [id]);
+            const { name, day_of_week, start_time, end_time, max_students } = sessionData;
             
-            if (!session) {
-                throw new Error('Lab session not found');
-            }
+            const query = `
+                UPDATE lab_sessions
+                SET name = $1, day_of_week = $2, start_time = $3, end_time = $4, max_students = $5
+                WHERE id = $6
+                RETURNING id
+            `;
             
-            // Check if lab exists
-            const [lab] = await db.query('SELECT * FROM labs WHERE id = ?', [lab_id]);
+            const values = [name, day_of_week, start_time, end_time, max_students, id];
+            const result = await db.query(query, values);
             
-            if (!lab) {
-                throw new Error('Lab not found');
-            }
-            
-            // Check for time conflicts with other sessions
-            const conflicts = await db.query(`
-                SELECT * FROM lab_sessions 
-                WHERE lab_id = ? 
-                AND day_of_week = ? 
-                AND id != ?
-                AND ((start_time <= ? AND end_time > ?) OR (start_time < ? AND end_time >= ?) OR (start_time >= ? AND end_time <= ?))
-            `, [lab_id, day_of_week, id, start_time, start_time, end_time, end_time, start_time, end_time]);
-            
-            if (conflicts.length > 0) {
-                throw new Error('Time conflict with another lab session');
-            }
-            
-            // Update lab session
-            await db.query(
-                'UPDATE lab_sessions SET lab_id = ?, name = ?, day_of_week = ?, start_time = ?, end_time = ?, max_students = ? WHERE id = ?',
-                [lab_id, name, day_of_week, start_time, end_time, max_students, id]
-            );
-            
-            return true;
+            return result.length > 0;
         } catch (error) {
             console.error('Error updating lab session:', error.message);
             throw error;
         }
     }
-    
+
     /**
      * Delete a lab session
      * @param {number} id - Lab session ID
@@ -166,23 +120,25 @@ class LabSession {
      */
     static async delete(id) {
         try {
-            // Check if lab session has attendance records
-            const attendance = await db.query('SELECT * FROM attendance WHERE lab_session_id = ?', [id]);
+            // First check if there are any attendance records for this session
+            const checkQuery = 'SELECT COUNT(*) as count FROM attendance WHERE lab_session_id = $1';
+            const checkResult = await db.query(checkQuery, [id]);
             
-            if (attendance.length > 0) {
-                throw new Error('Cannot delete lab session that has attendance records');
+            if (checkResult[0].count > 0) {
+                throw new Error('Cannot delete lab session with attendance records');
             }
             
-            // Delete lab session
-            await db.query('DELETE FROM lab_sessions WHERE id = ?', [id]);
+            // No attendance records, safe to delete
+            const query = 'DELETE FROM lab_sessions WHERE id = $1 RETURNING id';
+            const result = await db.query(query, [id]);
             
-            return true;
+            return result.length > 0;
         } catch (error) {
             console.error('Error deleting lab session:', error.message);
             throw error;
         }
     }
-    
+
     /**
      * Get available lab sessions for a specific day
      * @param {string} day - Day of week
@@ -190,17 +146,43 @@ class LabSession {
      */
     static async getAvailableByDay(day) {
         try {
-            return await db.query(`
-                SELECT ls.*, l.name as lab_name, l.location,
-                (SELECT COUNT(*) FROM attendance a WHERE a.lab_session_id = ls.id AND DATE(a.date) = CURDATE()) as current_attendance
+            const query = `
+                SELECT ls.*, l.name AS lab_name, l.location
                 FROM lab_sessions ls
                 JOIN labs l ON ls.lab_id = l.id
-                WHERE ls.day_of_week = ?
-                HAVING current_attendance < ls.max_students
+                WHERE ls.day_of_week = $1
                 ORDER BY ls.start_time
-            `, [day]);
+            `;
+            return await db.query(query, [day]);
         } catch (error) {
             console.error('Error getting available lab sessions by day:', error.message);
+            throw error;
+        }
+    }
+
+    /**
+     * Get lab sessions for a specific day
+     * @param {string} day - Day of week
+     * @returns {Promise<Array>} - Array of lab sessions
+     */
+    static async getByDay(day) {
+        try {
+            const query = `
+                SELECT ls.*, l.name AS lab_name, l.location,
+                (
+                    SELECT COUNT(*)
+                    FROM attendance a
+                    WHERE a.lab_session_id = ls.id
+                    AND DATE(a.date) = CURRENT_DATE
+                ) AS current_students
+                FROM lab_sessions ls
+                JOIN labs l ON ls.lab_id = l.id
+                WHERE ls.day_of_week = $1
+                ORDER BY ls.start_time
+            `;
+            return await db.query(query, [day]);
+        } catch (error) {
+            console.error('Error getting lab sessions by day:', error.message);
             throw error;
         }
     }

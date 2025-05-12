@@ -7,48 +7,39 @@ class Lab {
      * @returns {Promise<object>} - Created lab
      */
     static async create(labData) {
-        const { name, location, capacity, description } = labData;
-        
         try {
-            // Check if lab with same name already exists
-            const existingLab = await db.query('SELECT * FROM labs WHERE name = ?', [name]);
+            const { name, location, capacity, description } = labData;
             
-            if (existingLab.length > 0) {
-                throw new Error('Lab with this name already exists');
-            }
+            const query = `
+                INSERT INTO labs (name, location, capacity, description)
+                VALUES ($1, $2, $3, $4)
+                RETURNING *
+            `;
             
-            // Create lab
-            const result = await db.query(
-                'INSERT INTO labs (name, location, capacity, description) VALUES (?, ?, ?, ?)',
-                [name, location, capacity, description]
-            );
+            const values = [name, location, capacity, description || null];
+            const result = await db.query(query, values);
             
-            return {
-                id: result.insertId,
-                name,
-                location,
-                capacity,
-                description
-            };
+            return result[0];
         } catch (error) {
             console.error('Error creating lab:', error.message);
             throw error;
         }
     }
-    
+
     /**
      * Get all labs
      * @returns {Promise<Array>} - Array of labs
      */
     static async getAll() {
         try {
-            return await db.query('SELECT * FROM labs');
+            const query = 'SELECT * FROM labs ORDER BY name';
+            return await db.query(query);
         } catch (error) {
             console.error('Error getting all labs:', error.message);
             throw error;
         }
     }
-    
+
     /**
      * Get lab by ID
      * @param {number} id - Lab ID
@@ -56,14 +47,16 @@ class Lab {
      */
     static async getById(id) {
         try {
-            const [lab] = await db.query('SELECT * FROM labs WHERE id = ?', [id]);
-            return lab || null;
+            const query = 'SELECT * FROM labs WHERE id = $1';
+            const result = await db.query(query, [id]);
+            
+            return result.length > 0 ? result[0] : null;
         } catch (error) {
             console.error('Error getting lab by ID:', error.message);
             throw error;
         }
     }
-    
+
     /**
      * Update a lab
      * @param {number} id - Lab ID
@@ -71,38 +64,26 @@ class Lab {
      * @returns {Promise<boolean>} - Success status
      */
     static async update(id, labData) {
-        const { name, location, capacity, description } = labData;
-        
         try {
-            // Check if lab exists
-            const [lab] = await db.query('SELECT * FROM labs WHERE id = ?', [id]);
+            const { name, location, capacity, description } = labData;
             
-            if (!lab) {
-                throw new Error('Lab not found');
-            }
+            const query = `
+                UPDATE labs
+                SET name = $1, location = $2, capacity = $3, description = $4
+                WHERE id = $5
+                RETURNING id
+            `;
             
-            // Check if lab name is being changed and if new name conflicts
-            if (name !== lab.name) {
-                const conflictLab = await db.query('SELECT * FROM labs WHERE name = ? AND id != ?', [name, id]);
-                
-                if (conflictLab.length > 0) {
-                    throw new Error('Lab with this name already exists');
-                }
-            }
+            const values = [name, location, capacity, description || null, id];
+            const result = await db.query(query, values);
             
-            // Update lab
-            await db.query(
-                'UPDATE labs SET name = ?, location = ?, capacity = ?, description = ? WHERE id = ?',
-                [name, location, capacity, description, id]
-            );
-            
-            return true;
+            return result.length > 0;
         } catch (error) {
             console.error('Error updating lab:', error.message);
             throw error;
         }
     }
-    
+
     /**
      * Delete a lab
      * @param {number} id - Lab ID
@@ -110,24 +91,19 @@ class Lab {
      */
     static async delete(id) {
         try {
-            // Check if lab has associated lab sessions
-            const labSessions = await db.query('SELECT * FROM lab_sessions WHERE lab_id = ?', [id]);
+            // First check if there are any lab sessions for this lab
+            const checkQuery = 'SELECT COUNT(*) as count FROM lab_sessions WHERE lab_id = $1';
+            const checkResult = await db.query(checkQuery, [id]);
             
-            if (labSessions.length > 0) {
-                throw new Error('Cannot delete lab that has associated lab sessions');
+            if (checkResult[0].count > 0) {
+                throw new Error('Cannot delete lab with existing sessions');
             }
             
-            // Check if lab has associated attendance records
-            const attendance = await db.query('SELECT * FROM attendance WHERE lab_id = ?', [id]);
+            // No sessions, safe to delete
+            const query = 'DELETE FROM labs WHERE id = $1 RETURNING id';
+            const result = await db.query(query, [id]);
             
-            if (attendance.length > 0) {
-                throw new Error('Cannot delete lab that has associated attendance records');
-            }
-            
-            // Delete lab
-            await db.query('DELETE FROM labs WHERE id = ?', [id]);
-            
-            return true;
+            return result.length > 0;
         } catch (error) {
             console.error('Error deleting lab:', error.message);
             throw error;

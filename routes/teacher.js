@@ -2,473 +2,309 @@ const express = require('express');
 const router = express.Router();
 const { ensureAuthenticated, ensureTeacher } = require('../middleware/auth');
 const User = require('../models/User');
-const Attendance = require('../models/Attendance');
 const Lab = require('../models/Lab');
 const LabSession = require('../models/LabSession');
+const Attendance = require('../models/Attendance');
+
+// Apply middleware to all routes in this router
+router.use(ensureAuthenticated);
+router.use(ensureTeacher);
 
 // Teacher Dashboard
-router.get('/dashboard', ensureAuthenticated, ensureTeacher, async (req, res) => {
+router.get('/dashboard', async (req, res) => {
     try {
-        // Get counts for dashboard
-        const students = await User.getAllStudents();
-        const studentCount = students.length;
+        // Get statistics for dashboard
+        const stats = {
+            totalStudents: await User.getAllStudents().then(students => students.length),
+            totalLabs: await Lab.getAll().then(labs => labs.length),
+            totalSessions: await LabSession.getAll().then(sessions => sessions.length),
+            todayAttendance: 0 // Initialize with default
+        };
         
-        const labs = await Lab.getAll();
-        const labCount = labs.length;
+        // Get today's date in the format YYYY-MM-DD
+        const today = new Date().toISOString().split('T')[0];
         
-        const labSessions = await LabSession.getAll();
-        const sessionCount = labSessions.length;
+        // Get all attendance for today
+        const todayAttendanceCount = await Attendance.getStatistics(today, today)
+            .then(stats => stats.totalAttendance || 0);
         
-        // Get attendance statistics for current month
-        const today = new Date();
-        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        stats.todayAttendance = todayAttendanceCount;
         
-        const stats = await Attendance.getStatistics(firstDayOfMonth, lastDayOfMonth);
+        // Get recent attendance records (limited to 10 for dashboard)
+        const recentAttendance = await Attendance.getAll(10);
+        
+        // Get today's lab sessions
+        const todaySessions = await LabSession.getByDay(getCurrentDay());
         
         res.render('teacher/dashboard', {
             title: 'Teacher Dashboard',
-            user: req.session.user,
-            studentCount,
-            labCount,
-            sessionCount,
-            stats
+            stats,
+            recentAttendance,
+            todaySessions
         });
     } catch (error) {
-        console.error('Error loading teacher dashboard:', error.message);
-        req.session.error_msg = 'Error loading dashboard. Please try again.';
-        res.render('teacher/dashboard', {
-            title: 'Teacher Dashboard',
-            user: req.session.user,
-            studentCount: 0,
-            labCount: 0,
-            sessionCount: 0,
-            stats: { labAttendance: [], userAttendance: [] }
-        });
+        console.error('Error in teacher dashboard:', error);
+        req.session.error_msg = 'Error loading dashboard data';
+        res.redirect('/');
     }
 });
 
-// Students Management Page
-router.get('/students', ensureAuthenticated, ensureTeacher, async (req, res) => {
+// Manage Students
+router.get('/students', async (req, res) => {
     try {
         const students = await User.getAllStudents();
         
         res.render('teacher/students', {
-            title: 'Student Management',
-            user: req.session.user,
+            title: 'Manage Students',
             students
         });
     } catch (error) {
-        console.error('Error loading students page:', error.message);
-        req.session.error_msg = 'Error loading student data. Please try again.';
+        console.error('Error fetching students:', error);
+        req.session.error_msg = 'Error loading student data';
         res.redirect('/teacher/dashboard');
     }
 });
 
-// View Student Details
-router.get('/students/:id', ensureAuthenticated, ensureTeacher, async (req, res) => {
+// Manage Labs
+router.get('/labs', async (req, res) => {
     try {
-        const studentId = req.params.id;
-        
-        // Get student data
-        const student = await User.getById(studentId);
-        
-        if (!student || student.role !== 'student') {
-            req.session.error_msg = 'Student not found';
-            return res.redirect('/teacher/students');
-        }
-        
-        // Get student's attendance
-        const attendance = await Attendance.getByUserId(studentId);
-        
-        res.render('teacher/student-details', {
-            title: `Student: ${student.name}`,
-            user: req.session.user,
-            student,
-            attendance
-        });
-    } catch (error) {
-        console.error('Error loading student details:', error.message);
-        req.session.error_msg = 'Error loading student details. Please try again.';
-        res.redirect('/teacher/students');
-    }
-});
-
-// Delete Student
-router.post('/students/delete/:id', ensureAuthenticated, ensureTeacher, async (req, res) => {
-    try {
-        const studentId = req.params.id;
-        
-        // Delete student
-        await User.delete(studentId);
-        
-        req.session.success_msg = 'Student deleted successfully';
-        res.redirect('/teacher/students');
-    } catch (error) {
-        console.error('Error deleting student:', error.message);
-        req.session.error_msg = error.message || 'Error deleting student. Please try again.';
-        res.redirect('/teacher/students');
-    }
-});
-
-// Create Student
-router.post('/students/create', ensureAuthenticated, ensureTeacher, async (req, res) => {
-    try {
-        const { name, email, password, student_id } = req.body;
-        
-        // Basic validation
-        if (!name || !email || !password || !student_id) {
-            req.session.error_msg = 'Please fill in all fields';
-            return res.redirect('/teacher/students');
-        }
-        
-        // Create student
-        await User.create({
-            name,
-            email,
-            password,
-            role: 'student',
-            student_id
-        });
-        
-        req.session.success_msg = 'Student created successfully';
-        res.redirect('/teacher/students');
-    } catch (error) {
-        console.error('Error creating student:', error.message);
-        
-        if (error.message === 'Email already in use') {
-            req.session.error_msg = error.message;
-        } else {
-            req.session.error_msg = 'Error creating student. Please try again.';
-        }
-        
-        res.redirect('/teacher/students');
-    }
-});
-
-// Attendance Management Page
-router.get('/attendance', ensureAuthenticated, ensureTeacher, async (req, res) => {
-    try {
-        // Get all lab sessions
-        const labSessions = await LabSession.getAll();
-        
-        // Default to first session if available
-        const selectedSessionId = req.query.session_id || (labSessions.length > 0 ? labSessions[0].id : null);
-        
-        // Get attendance for selected session
-        let attendanceData = [];
-        if (selectedSessionId) {
-            attendanceData = await Attendance.getByLabSessionId(selectedSessionId);
-        }
-        
-        res.render('teacher/attendance', {
-            title: 'Attendance Management',
-            user: req.session.user,
-            labSessions,
-            selectedSessionId,
-            attendanceData
-        });
-    } catch (error) {
-        console.error('Error loading attendance page:', error.message);
-        req.session.error_msg = 'Error loading attendance data. Please try again.';
-        res.redirect('/teacher/dashboard');
-    }
-});
-
-// Labs Management Page
-router.get('/labs', ensureAuthenticated, ensureTeacher, async (req, res) => {
-    try {
-        // Get all labs
         const labs = await Lab.getAll();
         
         res.render('teacher/labs', {
-            title: 'Lab Management',
-            user: req.session.user,
+            title: 'Manage Labs',
             labs
         });
     } catch (error) {
-        console.error('Error loading labs page:', error.message);
-        req.session.error_msg = 'Error loading lab data. Please try again.';
+        console.error('Error fetching labs:', error);
+        req.session.error_msg = 'Error loading lab data';
         res.redirect('/teacher/dashboard');
     }
 });
 
-// Create Lab
-router.post('/labs/create', ensureAuthenticated, ensureTeacher, async (req, res) => {
+// Add New Lab
+router.post('/labs/add', async (req, res) => {
     try {
         const { name, location, capacity, description } = req.body;
         
-        // Basic validation
+        // Simple validation
         if (!name || !location || !capacity) {
             req.session.error_msg = 'Please fill in all required fields';
             return res.redirect('/teacher/labs');
         }
         
-        // Create lab
-        await Lab.create({
-            name,
-            location,
-            capacity,
-            description: description || ''
-        });
+        const labData = { name, location, capacity, description };
+        await Lab.create(labData);
         
-        req.session.success_msg = 'Lab created successfully';
+        req.session.success_msg = 'Lab added successfully';
         res.redirect('/teacher/labs');
     } catch (error) {
-        console.error('Error creating lab:', error.message);
-        
-        if (error.message === 'Lab with this name already exists') {
-            req.session.error_msg = error.message;
-        } else {
-            req.session.error_msg = 'Error creating lab. Please try again.';
-        }
-        
+        console.error('Error adding lab:', error);
+        req.session.error_msg = 'Error adding lab: ' + error.message;
         res.redirect('/teacher/labs');
     }
 });
 
-// Update Lab
-router.post('/labs/update/:id', ensureAuthenticated, ensureTeacher, async (req, res) => {
+// Edit Lab
+router.post('/labs/edit/:id', async (req, res) => {
     try {
         const labId = req.params.id;
         const { name, location, capacity, description } = req.body;
         
-        // Basic validation
+        // Simple validation
         if (!name || !location || !capacity) {
             req.session.error_msg = 'Please fill in all required fields';
             return res.redirect('/teacher/labs');
         }
         
-        // Update lab
-        await Lab.update(labId, {
-            name,
-            location,
-            capacity,
-            description: description || ''
-        });
+        const labData = { name, location, capacity, description };
+        const success = await Lab.update(labId, labData);
         
-        req.session.success_msg = 'Lab updated successfully';
+        if (success) {
+            req.session.success_msg = 'Lab updated successfully';
+        } else {
+            req.session.error_msg = 'Lab not found or no changes made';
+        }
+        
         res.redirect('/teacher/labs');
     } catch (error) {
-        console.error('Error updating lab:', error.message);
-        req.session.error_msg = error.message || 'Error updating lab. Please try again.';
+        console.error('Error updating lab:', error);
+        req.session.error_msg = 'Error updating lab: ' + error.message;
         res.redirect('/teacher/labs');
     }
 });
 
 // Delete Lab
-router.post('/labs/delete/:id', ensureAuthenticated, ensureTeacher, async (req, res) => {
+router.post('/labs/delete/:id', async (req, res) => {
     try {
         const labId = req.params.id;
+        const success = await Lab.delete(labId);
         
-        // Delete lab
-        await Lab.delete(labId);
-        
-        req.session.success_msg = 'Lab deleted successfully';
-        res.redirect('/teacher/labs');
-    } catch (error) {
-        console.error('Error deleting lab:', error.message);
-        req.session.error_msg = error.message || 'Error deleting lab. Please try again.';
-        res.redirect('/teacher/labs');
-    }
-});
-
-// Lab Sessions Management Page
-router.get('/labs/:id/sessions', ensureAuthenticated, ensureTeacher, async (req, res) => {
-    try {
-        const labId = req.params.id;
-        
-        // Get lab details
-        const lab = await Lab.getById(labId);
-        
-        if (!lab) {
-            req.session.error_msg = 'Lab not found';
-            return res.redirect('/teacher/labs');
+        if (success) {
+            req.session.success_msg = 'Lab deleted successfully';
+        } else {
+            req.session.error_msg = 'Lab not found or could not be deleted';
         }
         
-        // Get lab sessions
-        const sessions = await LabSession.getByLabId(labId);
-        
-        res.render('teacher/lab-sessions', {
-            title: `Sessions for ${lab.name}`,
-            user: req.session.user,
-            lab,
-            sessions
-        });
+        res.redirect('/teacher/labs');
     } catch (error) {
-        console.error('Error loading lab sessions page:', error.message);
-        req.session.error_msg = 'Error loading lab session data. Please try again.';
+        console.error('Error deleting lab:', error);
+        req.session.error_msg = 'Error deleting lab: ' + error.message;
         res.redirect('/teacher/labs');
     }
 });
 
-// Create Lab Session
-router.post('/labs/:id/sessions/create', ensureAuthenticated, ensureTeacher, async (req, res) => {
+// Manage Lab Sessions
+router.get('/sessions', async (req, res) => {
     try {
-        const labId = req.params.id;
-        const { name, day_of_week, start_time, end_time, max_students } = req.body;
+        const sessions = await LabSession.getAll();
+        const labs = await Lab.getAll();
         
-        // Basic validation
-        if (!name || !day_of_week || !start_time || !end_time || !max_students) {
-            req.session.error_msg = 'Please fill in all fields';
-            return res.redirect(`/teacher/labs/${labId}/sessions`);
-        }
-        
-        // Create lab session
-        await LabSession.create({
-            lab_id: labId,
-            name,
-            day_of_week,
-            start_time,
-            end_time,
-            max_students
-        });
-        
-        req.session.success_msg = 'Lab session created successfully';
-        res.redirect(`/teacher/labs/${labId}/sessions`);
-    } catch (error) {
-        console.error('Error creating lab session:', error.message);
-        req.session.error_msg = error.message || 'Error creating lab session. Please try again.';
-        res.redirect(`/teacher/labs/${req.params.id}/sessions`);
-    }
-});
-
-// Update Lab Session
-router.post('/labs/:labId/sessions/update/:id', ensureAuthenticated, ensureTeacher, async (req, res) => {
-    try {
-        const labId = req.params.labId;
-        const sessionId = req.params.id;
-        const { name, day_of_week, start_time, end_time, max_students } = req.body;
-        
-        // Basic validation
-        if (!name || !day_of_week || !start_time || !end_time || !max_students) {
-            req.session.error_msg = 'Please fill in all fields';
-            return res.redirect(`/teacher/labs/${labId}/sessions`);
-        }
-        
-        // Update lab session
-        await LabSession.update(sessionId, {
-            lab_id: labId,
-            name,
-            day_of_week,
-            start_time,
-            end_time,
-            max_students
-        });
-        
-        req.session.success_msg = 'Lab session updated successfully';
-        res.redirect(`/teacher/labs/${labId}/sessions`);
-    } catch (error) {
-        console.error('Error updating lab session:', error.message);
-        req.session.error_msg = error.message || 'Error updating lab session. Please try again.';
-        res.redirect(`/teacher/labs/${req.params.labId}/sessions`);
-    }
-});
-
-// Delete Lab Session
-router.post('/labs/:labId/sessions/delete/:id', ensureAuthenticated, ensureTeacher, async (req, res) => {
-    try {
-        const labId = req.params.labId;
-        const sessionId = req.params.id;
-        
-        // Delete lab session
-        await LabSession.delete(sessionId);
-        
-        req.session.success_msg = 'Lab session deleted successfully';
-        res.redirect(`/teacher/labs/${labId}/sessions`);
-    } catch (error) {
-        console.error('Error deleting lab session:', error.message);
-        req.session.error_msg = error.message || 'Error deleting lab session. Please try again.';
-        res.redirect(`/teacher/labs/${req.params.labId}/sessions`);
-    }
-});
-
-// Profile Page
-router.get('/profile', ensureAuthenticated, ensureTeacher, async (req, res) => {
-    try {
-        // Get fresh user data
-        const user = await User.getById(req.session.user.id);
-        
-        if (!user) {
-            req.session.error_msg = 'User not found';
-            return res.redirect('/teacher/dashboard');
-        }
-        
-        res.render('student/profile', { // Reuse student profile template
-            title: 'My Profile',
-            user: user,
-            formData: user,
-            isTeacher: true
+        res.render('teacher/sessions', {
+            title: 'Manage Lab Sessions',
+            sessions,
+            labs
         });
     } catch (error) {
-        console.error('Error loading profile page:', error.message);
-        req.session.error_msg = 'Error loading profile data. Please try again.';
+        console.error('Error fetching sessions:', error);
+        req.session.error_msg = 'Error loading session data';
         res.redirect('/teacher/dashboard');
     }
 });
 
-// Update Profile
-router.post('/profile/update', ensureAuthenticated, ensureTeacher, async (req, res) => {
+// Add New Lab Session
+router.post('/sessions/add', async (req, res) => {
     try {
-        const { name, email } = req.body;
+        const { labId, name, dayOfWeek, startTime, endTime, maxStudents } = req.body;
         
-        // Basic validation
-        if (!name || !email) {
+        // Simple validation
+        if (!labId || !name || !dayOfWeek || !startTime || !endTime || !maxStudents) {
             req.session.error_msg = 'Please fill in all required fields';
-            return res.redirect('/teacher/profile');
+            return res.redirect('/teacher/sessions');
         }
         
-        // Update user
-        await User.update(req.session.user.id, {
+        const sessionData = {
+            lab_id: labId,
             name,
-            email,
-            student_id: null
-        });
+            day_of_week: dayOfWeek,
+            start_time: startTime,
+            end_time: endTime,
+            max_students: maxStudents
+        };
         
-        // Update session user data
-        req.session.user.name = name;
-        req.session.user.email = email;
+        await LabSession.create(sessionData);
         
-        req.session.success_msg = 'Profile updated successfully';
-        res.redirect('/teacher/profile');
+        req.session.success_msg = 'Lab session added successfully';
+        res.redirect('/teacher/sessions');
     } catch (error) {
-        console.error('Error updating profile:', error.message);
-        req.session.error_msg = 'Error updating profile. Please try again.';
-        res.redirect('/teacher/profile');
+        console.error('Error adding session:', error);
+        req.session.error_msg = 'Error adding session: ' + error.message;
+        res.redirect('/teacher/sessions');
     }
 });
 
-// Change Password
-router.post('/profile/change-password', ensureAuthenticated, ensureTeacher, async (req, res) => {
+// Edit Lab Session
+router.post('/sessions/edit/:id', async (req, res) => {
     try {
-        const { current_password, new_password, confirm_password } = req.body;
+        const sessionId = req.params.id;
+        const { name, dayOfWeek, startTime, endTime, maxStudents } = req.body;
         
-        // Basic validation
-        if (!current_password || !new_password || !confirm_password) {
-            req.session.error_msg = 'Please fill in all password fields';
-            return res.redirect('/teacher/profile');
+        // Simple validation
+        if (!name || !dayOfWeek || !startTime || !endTime || !maxStudents) {
+            req.session.error_msg = 'Please fill in all required fields';
+            return res.redirect('/teacher/sessions');
         }
         
-        if (new_password !== confirm_password) {
-            req.session.error_msg = 'New passwords do not match';
-            return res.redirect('/teacher/profile');
+        const sessionData = {
+            name,
+            day_of_week: dayOfWeek,
+            start_time: startTime,
+            end_time: endTime,
+            max_students: maxStudents
+        };
+        
+        const success = await LabSession.update(sessionId, sessionData);
+        
+        if (success) {
+            req.session.success_msg = 'Lab session updated successfully';
+        } else {
+            req.session.error_msg = 'Lab session not found or no changes made';
         }
         
-        if (new_password.length < 6) {
-            req.session.error_msg = 'New password should be at least 6 characters';
-            return res.redirect('/teacher/profile');
-        }
-        
-        // Change password
-        await User.changePassword(req.session.user.id, current_password, new_password);
-        
-        req.session.success_msg = 'Password changed successfully';
-        res.redirect('/teacher/profile');
+        res.redirect('/teacher/sessions');
     } catch (error) {
-        console.error('Error changing password:', error.message);
-        req.session.error_msg = error.message || 'Error changing password. Please try again.';
-        res.redirect('/teacher/profile');
+        console.error('Error updating session:', error);
+        req.session.error_msg = 'Error updating session: ' + error.message;
+        res.redirect('/teacher/sessions');
     }
 });
+
+// Delete Lab Session
+router.post('/sessions/delete/:id', async (req, res) => {
+    try {
+        const sessionId = req.params.id;
+        const success = await LabSession.delete(sessionId);
+        
+        if (success) {
+            req.session.success_msg = 'Lab session deleted successfully';
+        } else {
+            req.session.error_msg = 'Lab session not found or could not be deleted';
+        }
+        
+        res.redirect('/teacher/sessions');
+    } catch (error) {
+        console.error('Error deleting session:', error);
+        req.session.error_msg = 'Error deleting session: ' + error.message;
+        res.redirect('/teacher/sessions');
+    }
+});
+
+// Manage Attendance
+router.get('/attendance', async (req, res) => {
+    try {
+        const attendance = await Attendance.getAll();
+        
+        res.render('teacher/attendance', {
+            title: 'Manage Attendance',
+            attendance
+        });
+    } catch (error) {
+        console.error('Error fetching attendance:', error);
+        req.session.error_msg = 'Error loading attendance data';
+        res.redirect('/teacher/dashboard');
+    }
+});
+
+// View Attendance for a Specific Lab Session
+router.get('/attendance/session/:id', async (req, res) => {
+    try {
+        const sessionId = req.params.id;
+        const session = await LabSession.getById(sessionId);
+        
+        if (!session) {
+            req.session.error_msg = 'Lab session not found';
+            return res.redirect('/teacher/attendance');
+        }
+        
+        const attendance = await Attendance.getByLabSessionId(sessionId);
+        const lab = await Lab.getById(session.lab_id);
+        
+        res.render('teacher/session-attendance', {
+            title: `Attendance: ${session.name}`,
+            session,
+            lab,
+            attendance
+        });
+    } catch (error) {
+        console.error('Error fetching session attendance:', error);
+        req.session.error_msg = 'Error loading attendance data for this session';
+        res.redirect('/teacher/attendance');
+    }
+});
+
+// Helper function to get current day of the week
+function getCurrentDay() {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[new Date().getDay()];
+}
 
 module.exports = router;

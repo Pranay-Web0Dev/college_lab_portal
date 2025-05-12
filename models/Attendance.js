@@ -7,38 +7,36 @@ class Attendance {
      * @returns {Promise<object>} - Created attendance record
      */
     static async markAttendance(attendanceData) {
-        const { user_id, lab_id, lab_session_id, date = new Date() } = attendanceData;
-        
         try {
-            // Check if attendance already marked for this session
-            const existingAttendance = await db.query(
-                'SELECT * FROM attendance WHERE user_id = ? AND lab_session_id = ? AND DATE(date) = DATE(?)',
-                [user_id, lab_session_id, date]
-            );
+            const { user_id, lab_id, lab_session_id } = attendanceData;
             
-            if (existingAttendance.length > 0) {
-                throw new Error('Attendance already marked for this session');
+            // Check if this user already has attendance for this session on this date
+            const checkQuery = `
+                SELECT id FROM attendance
+                WHERE user_id = $1 AND lab_session_id = $2 AND DATE(date) = CURRENT_DATE
+            `;
+            
+            const checkResult = await db.query(checkQuery, [user_id, lab_session_id]);
+            
+            if (checkResult.length > 0) {
+                throw new Error('Attendance already marked for this session today');
             }
             
-            // Insert new attendance record
-            const result = await db.query(
-                'INSERT INTO attendance (user_id, lab_id, lab_session_id, date) VALUES (?, ?, ?, ?)',
-                [user_id, lab_id, lab_session_id, date]
-            );
+            const insertQuery = `
+                INSERT INTO attendance (user_id, lab_id, lab_session_id)
+                VALUES ($1, $2, $3)
+                RETURNING *
+            `;
             
-            return {
-                id: result.insertId,
-                user_id,
-                lab_id,
-                lab_session_id,
-                date
-            };
+            const result = await db.query(insertQuery, [user_id, lab_id, lab_session_id]);
+            
+            return result[0];
         } catch (error) {
             console.error('Error marking attendance:', error.message);
             throw error;
         }
     }
-    
+
     /**
      * Get attendance by user ID
      * @param {number} userId - User ID
@@ -46,20 +44,23 @@ class Attendance {
      */
     static async getByUserId(userId) {
         try {
-            return await db.query(`
-                SELECT a.id, a.date, l.name as lab_name, ls.name as session_name, ls.start_time, ls.end_time
+            const query = `
+                SELECT a.*, l.name AS lab_name, ls.name AS session_name, 
+                       ls.day_of_week, ls.start_time, ls.end_time
                 FROM attendance a
                 JOIN labs l ON a.lab_id = l.id
                 JOIN lab_sessions ls ON a.lab_session_id = ls.id
-                WHERE a.user_id = ?
+                WHERE a.user_id = $1
                 ORDER BY a.date DESC
-            `, [userId]);
+            `;
+            
+            return await db.query(query, [userId]);
         } catch (error) {
             console.error('Error getting attendance by user ID:', error.message);
             throw error;
         }
     }
-    
+
     /**
      * Delete attendance record
      * @param {number} id - Attendance record ID
@@ -68,26 +69,16 @@ class Attendance {
      */
     static async delete(id, userId) {
         try {
-            // Verify that the attendance record belongs to the user
-            const [attendance] = await db.query('SELECT * FROM attendance WHERE id = ?', [id]);
+            const query = 'DELETE FROM attendance WHERE id = $1 AND user_id = $2 RETURNING id';
+            const result = await db.query(query, [id, userId]);
             
-            if (!attendance) {
-                throw new Error('Attendance record not found');
-            }
-            
-            if (attendance.user_id !== userId) {
-                throw new Error('Unauthorized to delete this attendance record');
-            }
-            
-            await db.query('DELETE FROM attendance WHERE id = ?', [id]);
-            
-            return true;
+            return result.length > 0;
         } catch (error) {
             console.error('Error deleting attendance:', error.message);
             throw error;
         }
     }
-    
+
     /**
      * Get attendance by lab session ID
      * @param {number} labSessionId - Lab session ID
@@ -95,19 +86,21 @@ class Attendance {
      */
     static async getByLabSessionId(labSessionId) {
         try {
-            return await db.query(`
-                SELECT a.id, a.date, u.id as user_id, u.name as user_name, u.student_id
+            const query = `
+                SELECT a.*, u.name AS student_name, u.email, u.student_id
                 FROM attendance a
                 JOIN users u ON a.user_id = u.id
-                WHERE a.lab_session_id = ?
+                WHERE a.lab_session_id = $1
                 ORDER BY a.date DESC
-            `, [labSessionId]);
+            `;
+            
+            return await db.query(query, [labSessionId]);
         } catch (error) {
             console.error('Error getting attendance by lab session ID:', error.message);
             throw error;
         }
     }
-    
+
     /**
      * Get attendance statistics by date range
      * @param {Date} startDate - Start date
@@ -116,29 +109,51 @@ class Attendance {
      */
     static async getStatistics(startDate, endDate) {
         try {
-            const attendanceData = await db.query(`
-                SELECT l.name as lab_name, COUNT(a.id) as attendance_count
-                FROM attendance a
-                JOIN labs l ON a.lab_id = l.id
-                WHERE a.date BETWEEN ? AND ?
-                GROUP BY l.name
-            `, [startDate, endDate]);
+            const query = `
+                SELECT 
+                    COUNT(*) AS total_attendance,
+                    COUNT(DISTINCT user_id) AS unique_students,
+                    COUNT(DISTINCT lab_session_id) AS unique_sessions
+                FROM attendance
+                WHERE DATE(date) BETWEEN $1 AND $2
+            `;
             
-            const userAttendance = await db.query(`
-                SELECT u.name as user_name, u.student_id, COUNT(a.id) as attendance_count
-                FROM attendance a
-                JOIN users u ON a.user_id = u.id
-                WHERE a.date BETWEEN ? AND ? AND u.role = 'student'
-                GROUP BY u.id
-                ORDER BY attendance_count DESC
-            `, [startDate, endDate]);
+            const result = await db.query(query, [startDate, endDate]);
             
             return {
-                labAttendance: attendanceData,
-                userAttendance: userAttendance
+                totalAttendance: parseInt(result[0].total_attendance),
+                uniqueStudents: parseInt(result[0].unique_students),
+                uniqueSessions: parseInt(result[0].unique_sessions)
             };
         } catch (error) {
             console.error('Error getting attendance statistics:', error.message);
+            throw error;
+        }
+    }
+
+    /**
+     * Get all attendance records, optionally limited
+     * @param {number} limit - Optional limit of records to return
+     * @returns {Promise<Array>} - Array of attendance records
+     */
+    static async getAll(limit = null) {
+        try {
+            let query = `
+                SELECT a.*, u.name AS student_name, l.name AS lab_name, ls.name AS session_name
+                FROM attendance a
+                JOIN users u ON a.user_id = u.id
+                JOIN labs l ON a.lab_id = l.id
+                JOIN lab_sessions ls ON a.lab_session_id = ls.id
+                ORDER BY a.date DESC
+            `;
+            
+            if (limit) {
+                query += ` LIMIT ${limit}`;
+            }
+            
+            return await db.query(query);
+        } catch (error) {
+            console.error('Error getting all attendance records:', error.message);
             throw error;
         }
     }
