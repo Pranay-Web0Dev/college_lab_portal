@@ -1,0 +1,102 @@
+<div class="container mt-4">
+    <h1 class="mb-4">{{title}}</h1>
+    
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/teacher/dashboard">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="/teacher/attendance">All Attendance</a></li>
+            <li class="breadcrumb-item active">Pending Approvals</li>
+        </ol>
+    </nav>
+    
+    {{#if user.subject}}
+    <div class="alert alert-info">
+        <i class="fas fa-filter me-2"></i> Showing attendance for subject: <strong>{{user.subject}}</strong>
+    </div>
+    {{else}}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-2"></i> 
+        You haven't set a subject in your profile. 
+        <a href="/teacher/profile" class="alert-link">Update your profile</a> to set your subject for better filtering.
+    </div>
+    {{/if}}
+    
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Pending Attendance Approvals</h4>
+        </div>
+        <div class="card-body">
+            {{#if pendingApprovals.length}}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="pendingApprovalsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Student Name</th>
+                                <th>Student ID</th>
+                                <th>Date & Time</th>
+                                <th>Lab</th>
+                                <th>Session</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{#each pendingApprovals}}
+                                <tr>
+                                    <td>{{id}}</td>
+                                    <td>{{student_name}}</td>
+                                    <td>{{student_id}}</td>
+                                    <td>{{formatDate date}}</td>
+                                    <td>{{lab_name}}</td>
+                                    <td>{{session_name}} ({{day_of_week}})</td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <form action="/teacher/attendance/approve/{{id}}" method="POST" class="d-inline me-1">
+                                                <button type="submit" class="btn btn-success btn-sm">
+                                                    <i class="fas fa-check"></i> Approve
+                                                </button>
+                                            </form>
+                                            <form action="/teacher/attendance/reject/{{id}}" method="POST" class="d-inline">
+                                                <button type="submit" class="btn btn-danger btn-sm reject-btn">
+                                                    <i class="fas fa-times"></i> Reject
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {{/each}}
+                        </tbody>
+                    </table>
+                </div>
+            {{else}}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i> No pending attendance approvals found.
+                </div>
+            {{/if}}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize DataTable
+    if (document.getElementById('pendingApprovalsTable')) {
+        $('#pendingApprovalsTable').DataTable({
+            order: [[3, 'desc']], // Sort by date
+            columnDefs: [
+                { orderable: false, targets: 6 } // Disable sorting on action column
+            ]
+        });
+    }
+    
+    // Confirmation for reject buttons
+    const rejectButtons = document.querySelectorAll('.reject-btn');
+    rejectButtons.forEach(button => {
+        button.closest('form').addEventListener('submit', function(e) {
+            if(!confirm('Are you sure you want to reject this attendance record? This action cannot be undone.')) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>

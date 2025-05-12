@@ -2,7 +2,7 @@ const dbModule = require('../config/database');
 
 class Attendance {
     /**
-     * Mark attendance for a user
+     * Mark attendance for a user (pending approval)
      * @param {object} attendanceData - Attendance data
      * @returns {Promise<object>} - Created attendance record
      */
@@ -22,9 +22,10 @@ class Attendance {
                 throw new Error('Attendance already marked for this session today');
             }
             
+            // Mark attendance as not approved initially
             const insertQuery = `
-                INSERT INTO attendance (user_id, lab_id, lab_session_id)
-                VALUES ($1, $2, $3)
+                INSERT INTO attendance (user_id, lab_id, lab_session_id, approved)
+                VALUES ($1, $2, $3, false)
                 RETURNING *
             `;
             
@@ -154,6 +155,84 @@ class Attendance {
             return await dbModule.query(query);
         } catch (error) {
             console.error('Error getting all attendance records:', error.message);
+            throw error;
+        }
+    }
+
+    /**
+     * Get pending attendance records that need approval
+     * @param {string} subject - Optional subject filter for teachers
+     * @returns {Promise<Array>} - Array of pending attendance records
+     */
+    static async getPendingApprovals(subject = null) {
+        try {
+            let query = `
+                SELECT a.*, u.name AS student_name, u.student_id, u.email,
+                       l.name AS lab_name, ls.name AS session_name, ls.day_of_week,
+                       t.subject AS teacher_subject
+                FROM attendance a
+                JOIN users u ON a.user_id = u.id
+                JOIN labs l ON a.lab_id = l.id
+                JOIN lab_sessions ls ON a.lab_session_id = ls.id
+                JOIN users t ON t.role = 'teacher' AND t.subject IS NOT NULL
+                WHERE a.approved = false
+            `;
+            
+            // Add subject filter if provided
+            if (subject) {
+                query += ` AND t.subject = $1`;
+            }
+            
+            query += ` ORDER BY a.date DESC`;
+            
+            if (subject) {
+                return await dbModule.query(query, [subject]);
+            } else {
+                return await dbModule.query(query);
+            }
+        } catch (error) {
+            console.error('Error getting pending approvals:', error.message);
+            throw error;
+        }
+    }
+    
+    /**
+     * Approve an attendance record
+     * @param {number} id - Attendance record ID
+     * @param {number} teacherId - Teacher ID (for validation)
+     * @returns {Promise<boolean>} - Success status
+     */
+    static async approve(id, teacherId) {
+        try {
+            const query = `
+                UPDATE attendance
+                SET approved = true
+                WHERE id = $1
+                RETURNING id
+            `;
+            
+            const result = await dbModule.query(query, [id]);
+            return result.length > 0;
+        } catch (error) {
+            console.error('Error approving attendance:', error.message);
+            throw error;
+        }
+    }
+    
+    /**
+     * Reject an attendance record (delete it)
+     * @param {number} id - Attendance record ID
+     * @param {number} teacherId - Teacher ID (for validation)
+     * @returns {Promise<boolean>} - Success status
+     */
+    static async reject(id, teacherId) {
+        try {
+            const query = 'DELETE FROM attendance WHERE id = $1 RETURNING id';
+            const result = await dbModule.query(query, [id]);
+            
+            return result.length > 0;
+        } catch (error) {
+            console.error('Error rejecting attendance:', error.message);
             throw error;
         }
     }

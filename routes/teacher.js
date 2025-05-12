@@ -274,6 +274,68 @@ router.get('/attendance', async (req, res) => {
     }
 });
 
+// Pending Attendance Approvals
+router.get('/attendance/pending', async (req, res) => {
+    try {
+        // If teacher has set a subject, filter approvals by subject
+        const subject = req.session.user.subject || null;
+        const pendingApprovals = await Attendance.getPendingApprovals(subject);
+        
+        res.render('teacher/pending-approvals', {
+            title: 'Pending Attendance Approvals',
+            pendingApprovals
+        });
+    } catch (error) {
+        console.error('Error fetching pending approvals:', error);
+        req.session.error_msg = 'Error loading pending approvals data';
+        res.redirect('/teacher/attendance');
+    }
+});
+
+// Approve Attendance
+router.post('/attendance/approve/:id', async (req, res) => {
+    try {
+        const attendanceId = req.params.id;
+        const teacherId = req.session.user.id;
+        
+        const success = await Attendance.approve(attendanceId, teacherId);
+        
+        if (success) {
+            req.session.success_msg = 'Attendance has been approved successfully';
+        } else {
+            req.session.error_msg = 'Failed to approve attendance';
+        }
+        
+        res.redirect('/teacher/attendance/pending');
+    } catch (error) {
+        console.error('Error approving attendance:', error);
+        req.session.error_msg = 'Error during attendance approval: ' + error.message;
+        res.redirect('/teacher/attendance/pending');
+    }
+});
+
+// Reject Attendance
+router.post('/attendance/reject/:id', async (req, res) => {
+    try {
+        const attendanceId = req.params.id;
+        const teacherId = req.session.user.id;
+        
+        const success = await Attendance.reject(attendanceId, teacherId);
+        
+        if (success) {
+            req.session.success_msg = 'Attendance has been rejected';
+        } else {
+            req.session.error_msg = 'Failed to reject attendance';
+        }
+        
+        res.redirect('/teacher/attendance/pending');
+    } catch (error) {
+        console.error('Error rejecting attendance:', error);
+        req.session.error_msg = 'Error during attendance rejection: ' + error.message;
+        res.redirect('/teacher/attendance/pending');
+    }
+});
+
 // View Attendance for a Specific Lab Session
 router.get('/attendance/session/:id', async (req, res) => {
     try {
