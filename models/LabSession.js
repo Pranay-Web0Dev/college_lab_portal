@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const dbModule = require('../config/database');
 
 class LabSession {
     /**
@@ -17,7 +17,7 @@ class LabSession {
             `;
             
             const values = [lab_id, name, day_of_week, start_time, end_time, max_students];
-            const result = await db.query(query, values);
+            const result = await dbModule.query(query, values);
             
             return result[0];
         } catch (error) {
@@ -38,7 +38,7 @@ class LabSession {
                 JOIN labs l ON ls.lab_id = l.id
                 ORDER BY ls.day_of_week, ls.start_time
             `;
-            return await db.query(query);
+            return await dbModule.query(query);
         } catch (error) {
             console.error('Error getting all lab sessions:', error.message);
             throw error;
@@ -57,7 +57,7 @@ class LabSession {
                 WHERE lab_id = $1
                 ORDER BY day_of_week, start_time
             `;
-            return await db.query(query, [labId]);
+            return await dbModule.query(query, [labId]);
         } catch (error) {
             console.error('Error getting lab sessions by lab ID:', error.message);
             throw error;
@@ -77,7 +77,7 @@ class LabSession {
                 JOIN labs l ON ls.lab_id = l.id
                 WHERE ls.id = $1
             `;
-            const result = await db.query(query, [id]);
+            const result = await dbModule.query(query, [id]);
             
             return result.length > 0 ? result[0] : null;
         } catch (error) {
@@ -104,7 +104,7 @@ class LabSession {
             `;
             
             const values = [name, day_of_week, start_time, end_time, max_students, id];
-            const result = await db.query(query, values);
+            const result = await dbModule.query(query, values);
             
             return result.length > 0;
         } catch (error) {
@@ -122,7 +122,7 @@ class LabSession {
         try {
             // First check if there are any attendance records for this session
             const checkQuery = 'SELECT COUNT(*) as count FROM attendance WHERE lab_session_id = $1';
-            const checkResult = await db.query(checkQuery, [id]);
+            const checkResult = await dbModule.query(checkQuery, [id]);
             
             if (checkResult[0].count > 0) {
                 throw new Error('Cannot delete lab session with attendance records');
@@ -130,7 +130,7 @@ class LabSession {
             
             // No attendance records, safe to delete
             const query = 'DELETE FROM lab_sessions WHERE id = $1 RETURNING id';
-            const result = await db.query(query, [id]);
+            const result = await dbModule.query(query, [id]);
             
             return result.length > 0;
         } catch (error) {
@@ -153,7 +153,7 @@ class LabSession {
                 WHERE ls.day_of_week = $1
                 ORDER BY ls.start_time
             `;
-            return await db.query(query, [day]);
+            return await dbModule.query(query, [day]);
         } catch (error) {
             console.error('Error getting available lab sessions by day:', error.message);
             throw error;
@@ -180,7 +180,7 @@ class LabSession {
                 WHERE ls.day_of_week = $1
                 ORDER BY ls.start_time
             `;
-            return await db.query(query, [day]);
+            return await dbModule.query(query, [day]);
         } catch (error) {
             console.error('Error getting lab sessions by day:', error.message);
             throw error;

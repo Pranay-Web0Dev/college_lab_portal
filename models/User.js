@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const dbModule = require('../config/database');
 const { hashPassword } = require('../config/auth');
 
 class User {
@@ -36,7 +36,7 @@ class User {
                 params.push(userData.studentId);
             }
 
-            const result = await db.query(query, params);
+            const result = await dbModule.query(query, params);
             const user = result[0];
             
             // Don't return password to client
@@ -57,7 +57,7 @@ class User {
     static async getById(id) {
         try {
             const query = 'SELECT * FROM users WHERE id = $1';
-            const result = await db.query(query, [id]);
+            const result = await dbModule.query(query, [id]);
             
             if (result.length === 0) {
                 return null;
@@ -81,7 +81,7 @@ class User {
     static async getByEmail(email) {
         try {
             const query = 'SELECT * FROM users WHERE email = $1';
-            const result = await db.query(query, [email]);
+            const result = await dbModule.query(query, [email]);
             
             if (result.length === 0) {
                 return null;
@@ -128,7 +128,7 @@ class User {
                 RETURNING id
             `;
 
-            const result = await db.query(query, values);
+            const result = await dbModule.query(query, values);
             return result.length > 0;
         } catch (error) {
             console.error('Error updating user:', error.message);
@@ -144,7 +144,7 @@ class User {
     static async delete(id) {
         try {
             const query = 'DELETE FROM users WHERE id = $1 RETURNING id';
-            const result = await db.query(query, [id]);
+            const result = await dbModule.query(query, [id]);
             return result.length > 0;
         } catch (error) {
             console.error('Error deleting user:', error.message);
@@ -164,7 +164,7 @@ class User {
                 WHERE role = 'student'
                 ORDER BY name
             `;
-            return await db.query(query);
+            return await dbModule.query(query);
         } catch (error) {
             console.error('Error getting all students:', error.message);
             throw error;
@@ -183,7 +183,7 @@ class User {
             // First, get the user with current password hash
             const { comparePassword } = require('../config/auth');
             const getUserQuery = 'SELECT password FROM users WHERE id = $1';
-            const userResult = await db.query(getUserQuery, [id]);
+            const userResult = await dbModule.query(getUserQuery, [id]);
             
             if (userResult.length === 0) {
                 return false;
@@ -200,7 +200,7 @@ class User {
             // Update to new password
             const hashedPassword = await hashPassword(newPassword);
             const updateQuery = 'UPDATE users SET password = $1 WHERE id = $2 RETURNING id';
-            const result = await db.query(updateQuery, [hashedPassword, id]);
+            const result = await dbModule.query(updateQuery, [hashedPassword, id]);
             
             return result.length > 0;
         } catch (error) {

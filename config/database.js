@@ -21,6 +21,7 @@ async function query(sql, params = []) {
         // Replace some MySQL specific syntax
         pgSql = pgSql.replace(/`/g, '"');
         
+        // Use the raw pool.query to avoid recursion
         const result = await pool.query(pgSql, params);
         return result.rows;
     } catch (error) {
@@ -31,10 +32,15 @@ async function query(sql, params = []) {
     }
 }
 
+// Create a module object to avoid overwriting the pool's query method
+const dbModule = {
+    pool,
+    query
+};
+
 // Test connection
 pool.connect()
     .then(() => console.log('PostgreSQL connected successfully'))
     .catch(err => console.error('PostgreSQL connection failed:', err.message));
 
-module.exports = pool;
-module.exports.query = query;
+module.exports = dbModule;

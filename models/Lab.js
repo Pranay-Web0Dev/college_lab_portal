@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const dbModule = require('../config/database');
 
 class Lab {
     /**

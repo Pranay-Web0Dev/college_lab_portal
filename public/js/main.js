@@ -15,15 +15,64 @@ document.addEventListener('DOMContentLoaded', function() {
 function initFormValidation() {
     const forms = document.querySelectorAll('.needs-validation');
     
+    // Hide all validation feedback elements initially
+    document.querySelectorAll('.invalid-feedback').forEach(item => {
+        item.style.display = 'none';
+    });
+    
     Array.from(forms).forEach(form => {
+        // Validate on submit
         form.addEventListener('submit', event => {
             if (!form.checkValidity()) {
                 event.preventDefault();
                 event.stopPropagation();
+                
+                // Show feedback only for invalid fields
+                const invalidFields = form.querySelectorAll(':invalid');
+                invalidFields.forEach(field => {
+                    const feedback = field.nextElementSibling;
+                    if (feedback && feedback.classList.contains('invalid-feedback')) {
+                        feedback.style.display = 'block';
+                    }
+                });
             }
             
             form.classList.add('was-validated');
         }, false);
+        
+        // Add field-specific validation
+        const fields = form.querySelectorAll('input, select, textarea');
+        fields.forEach(field => {
+            field.addEventListener('blur', () => {
+                // Check validity only after user interacts with field
+                if (field.value !== '') {
+                    if (!field.checkValidity()) {
+                        field.classList.add('is-invalid');
+                        const feedback = field.nextElementSibling;
+                        if (feedback && feedback.classList.contains('invalid-feedback')) {
+                            feedback.style.display = 'block';
+                        }
+                    } else {
+                        field.classList.remove('is-invalid');
+                        field.classList.add('is-valid');
+                        const feedback = field.nextElementSibling;
+                        if (feedback && feedback.classList.contains('invalid-feedback')) {
+                            feedback.style.display = 'none';
+                        }
+                    }
+                }
+            });
+            
+            // Clear validation when user starts typing again
+            field.addEventListener('input', () => {
+                field.classList.remove('is-invalid');
+                field.classList.remove('is-valid');
+                const feedback = field.nextElementSibling;
+                if (feedback && feedback.classList.contains('invalid-feedback')) {
+                    feedback.style.display = 'none';
+                }
+            });
+        });
     });
 }
 
