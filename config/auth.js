@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const User = require('../models/User');
+const dbModule = require('./database');
 
 /**
  * Hash a password
@@ -28,16 +28,23 @@ async function comparePassword(password, hash) {
  * @returns {Promise<object|null>} - User object or null if authentication fails
  */
 async function authenticateUser(email, password) {
-    const user = await User.getByEmail(email);
-    if (!user) {
+    // Get user by email directly using database query
+    const query = 'SELECT * FROM users WHERE email = $1';
+    const users = await dbModule.query(query, [email]);
+    
+    if (users.length === 0) {
         return null;
     }
-
+    
+    const user = users[0];
     const isMatch = await comparePassword(password, user.password);
+    
     if (!isMatch) {
         return null;
     }
-
+    
+    // Don't include password in returned object
+    delete user.password;
     return user;
 }
 

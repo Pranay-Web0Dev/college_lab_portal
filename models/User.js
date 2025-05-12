@@ -180,8 +180,10 @@ class User {
      */
     static async changePassword(id, oldPassword, newPassword) {
         try {
+            // Import password handling functions
+            const { comparePassword, hashPassword } = require('../config/auth');
+            
             // First, get the user with current password hash
-            const { comparePassword } = require('../config/auth');
             const getUserQuery = 'SELECT password FROM users WHERE id = $1';
             const userResult = await dbModule.query(getUserQuery, [id]);
             

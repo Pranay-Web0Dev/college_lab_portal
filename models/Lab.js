@@ -75,7 +75,7 @@ class Lab {
             `;
             
             const values = [name, location, capacity, description || null, id];
-            const result = await db.query(query, values);
+            const result = await dbModule.query(query, values);
             
             return result.length > 0;
         } catch (error) {
@@ -93,7 +93,7 @@ class Lab {
         try {
             // First check if there are any lab sessions for this lab
             const checkQuery = 'SELECT COUNT(*) as count FROM lab_sessions WHERE lab_id = $1';
-            const checkResult = await db.query(checkQuery, [id]);
+            const checkResult = await dbModule.query(checkQuery, [id]);
             
             if (checkResult[0].count > 0) {
                 throw new Error('Cannot delete lab with existing sessions');
@@ -101,7 +101,7 @@ class Lab {
             
             // No sessions, safe to delete
             const query = 'DELETE FROM labs WHERE id = $1 RETURNING id';
-            const result = await db.query(query, [id]);
+            const result = await dbModule.query(query, [id]);
             
             return result.length > 0;
         } catch (error) {
