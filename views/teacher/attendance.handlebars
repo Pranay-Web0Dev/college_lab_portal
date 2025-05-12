@@ -1,0 +1,156 @@
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12 mb-4">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/teacher/dashboard">Dashboard</a></li>
+                    <li class="breadcrumb-item active">Attendance Management</li>
+                </ol>
+            </nav>
+            <h2 class="mb-4"><i class="fas fa-calendar-check me-2"></i>Attendance Management</h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Session Selection -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Lab Sessions</h5>
+                </div>
+                <div class="card-body">
+                    <form action="/teacher/attendance" method="GET" class="mb-3">
+                        <div class="mb-3">
+                            <label for="session_id" class="form-label">Select Lab Session</label>
+                            <select class="form-select" id="session_id" name="session_id" onchange="this.form.submit()">
+                                <option value="" disabled {{#unless selectedSessionId}}selected{{/unless}}>Choose a session</option>
+                                {{#each labSessions}}
+                                    <option value="{{this.id}}" {{#if (ifEquals ../selectedSessionId (toString this.id))}}selected{{/if}}>
+                                        {{this.lab_name}} - {{this.name}} ({{this.day_of_week}})
+                                    </option>
+                                {{/each}}
+                            </select>
+                        </div>
+                    </form>
+                    
+                    {{#if selectedSessionId}}
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading">Session Details</h6>
+                            {{#each labSessions}}
+                                {{#if (ifEquals ../selectedSessionId (toString this.id))}}
+                                    <p class="mb-0"><strong>Lab:</strong> {{this.lab_name}}</p>
+                                    <p class="mb-0"><strong>Session:</strong> {{this.name}}</p>
+                                    <p class="mb-0"><strong>Day:</strong> {{this.day_of_week}}</p>
+                                    <p class="mb-0"><strong>Time:</strong> {{this.start_time}} - {{this.end_time}}</p>
+                                    <p class="mb-0"><strong>Max Students:</strong> {{this.max_students}}</p>
+                                {{/if}}
+                            {{/each}}
+                        </div>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Attendance List -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Attendance Records</h5>
+                        {{#if attendanceData.length}}
+                            <span class="badge bg-primary rounded-pill">{{attendanceData.length}} Records</span>
+                        {{/if}}
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {{#if selectedSessionId}}
+                        {{#if attendanceData.length}}
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Student Name</th>
+                                            <th>Student ID</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {{#each attendanceData}}
+                                            <tr>
+                                                <td>{{formatDate this.date}}</td>
+                                                <td>
+                                                    <a href="/teacher/students/{{this.user_id}}">
+                                                        {{this.user_name}}
+                                                    </a>
+                                                </td>
+                                                <td>{{this.student_id}}</td>
+                                                <td>
+                                                    <form action="/student/attendance/delete/{{this.id}}" method="POST"
+                                                        onsubmit="return confirm('Are you sure you want to delete this attendance record?');">
+                                                        <button type="submit" class="btn btn-sm btn-danger">
+                                                            <i class="fas fa-trash-alt"></i>
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        {{/each}}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {{else}}
+                            <div class="text-center py-5">
+                                <i class="fas fa-calendar-times text-muted fa-3x mb-3"></i>
+                                <h5>No attendance records found</h5>
+                                <p class="text-muted">No students have marked attendance for this session.</p>
+                            </div>
+                        {{/if}}
+                    {{else}}
+                        <div class="text-center py-5">
+                            <i class="fas fa-hand-point-left text-muted fa-3x mb-3"></i>
+                            <h5>Select a lab session</h5>
+                            <p class="text-muted">Choose a lab session from the left to view attendance records.</p>
+                        </div>
+                    {{/if}}
+                </div>
+                
+                {{#if attendanceData.length}}
+                    <div class="card-footer bg-white d-flex justify-content-end">
+                        <button type="button" class="btn btn-outline-primary" onclick="exportTableToCSV('attendanceTable', 'attendance_report.csv')">
+                            <i class="fas fa-download me-2"></i>Export to CSV
+                        </button>
+                    </div>
+                {{/if}}
+            </div>
+            
+            <!-- Attendance Statistics Card -->
+            {{#if attendanceData.length}}
+                <div class="card shadow-sm mt-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Attendance Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="alert alert-success">
+                                    <h5 class="alert-heading">Total Present</h5>
+                                    <h2>{{attendanceData.length}}</h2>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-warning">
+                                    {{#each labSessions}}
+                                        {{#if (ifEquals ../selectedSessionId (toString this.id))}}
+                                            <h5 class="alert-heading">Attendance Rate</h5>
+                                            <h2>{{multiply (divide ../attendanceData.length this.max_students) 100}}%</h2>
+                                        {{/if}}
+                                    {{/each}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {{/if}}
+        </div>
+    </div>
+</div>

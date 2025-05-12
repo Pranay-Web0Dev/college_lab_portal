@@ -1,0 +1,32 @@
+modules = ["nodejs-20", "postgresql-16"]
+
+[nix]
+channel = "stable-24_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "College Lab Portal Server"
+
+[[workflows.workflow]]
+name = "College Lab Portal Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm install express express-handlebars express-session pg connect-pg-simple bcryptjs dotenv body-parser && node index.js"
+waitForPort = 5000
+
+[deployment]
+run = ["sh", "-c", "npm install express express-handlebars express-session express-mysql-session mysql2 bcryptjs dotenv body-parser && node index.js"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80

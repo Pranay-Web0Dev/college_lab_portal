@@ -1,0 +1,199 @@
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <span class="display-5 text-primary">
+                                <i class="fas fa-chalkboard-teacher"></i>
+                            </span>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h1 class="h3 mb-0">Welcome, {{user.name}}!</h1>
+                            <p class="text-muted mb-0">Teacher Dashboard</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3 mb-md-0">
+            <div class="card bg-primary text-white shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="fw-normal">Total Students</h5>
+                            <h2 class="mb-0">{{studentCount}}</h2>
+                        </div>
+                        <div class="flex-shrink-0 ms-3">
+                            <i class="fas fa-users fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0 text-end">
+                    <a href="/teacher/students" class="text-white text-decoration-none small">
+                        View Details <i class="fas fa-arrow-circle-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3 mb-md-0">
+            <div class="card bg-success text-white shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="fw-normal">Total Labs</h5>
+                            <h2 class="mb-0">{{labCount}}</h2>
+                        </div>
+                        <div class="flex-shrink-0 ms-3">
+                            <i class="fas fa-flask fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0 text-end">
+                    <a href="/teacher/labs" class="text-white text-decoration-none small">
+                        View Details <i class="fas fa-arrow-circle-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card bg-info text-white shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="fw-normal">Lab Sessions</h5>
+                            <h2 class="mb-0">{{sessionCount}}</h2>
+                        </div>
+                        <div class="flex-shrink-0 ms-3">
+                            <i class="fas fa-clock fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent border-0 text-end">
+                    <a href="/teacher/labs" class="text-white text-decoration-none small">
+                        View Details <i class="fas fa-arrow-circle-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <!-- Lab Attendance Chart -->
+        <div class="col-lg-6 mb-4 mb-lg-0">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Lab Attendance (This Month)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="labAttendanceChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Top Students -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-trophy me-2"></i>Top Attending Students</h5>
+                </div>
+                <div class="card-body p-0">
+                    {{#if stats.userAttendance.length}}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Student</th>
+                                        <th>ID</th>
+                                        <th>Attendance</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{#each stats.userAttendance}}
+                                        {{#if @index}}{{#if (ifEquals @index 10)}}{{break}}{{/if}}{{/if}}
+                                        <tr>
+                                            <td>{{add @index 1}}</td>
+                                            <td>{{this.user_name}}</td>
+                                            <td>{{this.student_id}}</td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="flex-grow-1 me-2">
+                                                        <div class="progress" style="height: 8px;">
+                                                            <div class="progress-bar bg-success" role="progressbar" 
+                                                                style="width: {{multiply (divide this.attendance_count 30) 100}}%"></div>
+                                                        </div>
+                                                    </div>
+                                                    <span class="badge bg-success">{{this.attendance_count}}</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {{/each}}
+                                </tbody>
+                            </table>
+                        </div>
+                    {{else}}
+                        <div class="text-center py-5">
+                            <i class="fas fa-chart-line text-muted fa-3x mb-3"></i>
+                            <h5>No attendance data available</h5>
+                            <p class="text-muted">Data will appear as students mark their attendance.</p>
+                        </div>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campus Images -->
+    <div class="row">
+        <div class="col-12 mb-3">
+            <h4><i class="fas fa-university me-2"></i>Campus Facilities</h4>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <img src="https://pixabay.com/get/gd85e250056df62df2cc5728a90001f8081c87c74c4f0e70a84aa26d646fb600e54defc9948f6aa971437f1374795a744_1280.jpg" 
+                    class="card-img-top campus-img" alt="Campus Buildings" loading="lazy">
+                <div class="card-body">
+                    <h5 class="card-title">Main Campus</h5>
+                    <p class="card-text">Our beautiful campus with modern facilities for teaching and learning.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <img src="https://pixabay.com/get/ge17862f4fa4525ce0bfb5aba2503a7cb4cbfccc5a3514dedc7a1db7fe67d0afc74ca83ac288c31cbbad403584dfb623312ba45bd3e57353edd962b31762fffd1_1280.jpg" 
+                    class="card-img-top campus-img" alt="Computer Lab" loading="lazy">
+                <div class="card-body">
+                    <h5 class="card-title">Computer Labs</h5>
+                    <p class="card-text">Well-equipped computer labs for practical learning and research.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <img src="https://pixabay.com/get/gb14b2766ed2143489e584d78a37881fc814055b227ffc42b6b1de0e1275a6f61cc482155072b42ededb4910557d6a091217f4d37026de7bf20162fa4f8d54bef_1280.jpg" 
+                    class="card-img-top campus-img" alt="Study Area" loading="lazy">
+                <div class="card-body">
+                    <h5 class="card-title">Study Areas</h5>
+                    <p class="card-text">Comfortable spaces for students to study and collaborate on projects.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Data for charts
+const labAttendanceData = {
+    labs: [{{#each stats.labAttendance}}'{{this.lab_name}}'{{#unless @last}}, {{/unless}}{{/each}}],
+    counts: [{{#each stats.labAttendance}}{{this.attendance_count}}{{#unless @last}}, {{/unless}}{{/each}}]
+};
+</script>

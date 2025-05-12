@@ -1,0 +1,54 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand" href="/">College Lab Portal</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                {{#ifEquals user.role "student"}}
+                    <li class="nav-item">
+                        <a class="nav-link" href="/student/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/student/attendance">My Attendance</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/student/labs">Lab Sessions</a>
+                    </li>
+                {{/ifEquals}}
+                
+                {{#ifEquals user.role "teacher"}}
+                    <li class="nav-item">
+                        <a class="nav-link" href="/teacher/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/teacher/students">Students</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/teacher/labs">Labs</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/teacher/sessions">Lab Sessions</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/teacher/attendance">Attendance</a>
+                    </li>
+                {{/ifEquals}}
+            </ul>
+            <ul class="navbar-nav">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-user me-1"></i> {{user.name}}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                        <li><a class="dropdown-item" href="/profile"><i class="fas fa-id-card me-1"></i> Profile</a></li>
+                        <li><a class="dropdown-item" href="/change-password"><i class="fas fa-key me-1"></i> Change Password</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/logout"><i class="fas fa-sign-out-alt me-1"></i> Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>

@@ -1,0 +1,166 @@
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <span class="display-5 text-primary">
+                                <i class="fas fa-user-graduate"></i>
+                            </span>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h1 class="h3 mb-0">Welcome, {{user.name}}!</h1>
+                            <p class="text-muted mb-0">Student Dashboard</p>
+                        </div>
+                        <div class="d-none d-md-block">
+                            <span class="badge bg-info text-white p-2">
+                                <i class="fas fa-id-card me-1"></i> ID: {{user.student_id}}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- Available Lab Sessions -->
+        <div class="col-lg-7 mb-4 mb-lg-0">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-flask me-2"></i>Available Lab Sessions ({{currentDay}})
+                        </h5>
+                        <span class="text-muted small">Mark your attendance</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {{#if availableSessions.length}}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Lab</th>
+                                        <th>Session</th>
+                                        <th>Time</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{#each availableSessions}}
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold">{{this.lab_name}}</div>
+                                                <div class="small text-muted">{{this.location}}</div>
+                                            </td>
+                                            <td>{{this.name}}</td>
+                                            <td>{{this.start_time}} - {{this.end_time}}</td>
+                                            <td>
+                                                <form action="/student/attendance/mark" method="POST">
+                                                    <input type="hidden" name="lab_id" value="{{this.lab_id}}">
+                                                    <input type="hidden" name="lab_session_id" value="{{this.id}}">
+                                                    <button type="submit" class="btn btn-sm btn-primary">
+                                                        <i class="fas fa-check me-1"></i>Mark Attendance
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    {{/each}}
+                                </tbody>
+                            </table>
+                        </div>
+                    {{else}}
+                        <div class="alert alert-info d-flex align-items-center" role="alert">
+                            <i class="fas fa-info-circle me-2 fs-4"></i>
+                            <div>
+                                No available lab sessions for today ({{currentDay}}). Please check back later or visit the lab schedule.
+                            </div>
+                        </div>
+                    {{/if}}
+                </div>
+                <div class="card-footer bg-white text-center">
+                    <a href="/student/attendance" class="btn btn-outline-primary">
+                        <i class="fas fa-calendar-check me-1"></i>View All Attendance
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>Recent Activity
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {{#if recentAttendance.length}}
+                            {{#each recentAttendance}}
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{this.lab_name}}</h6>
+                                        <small class="text-muted">
+                                            {{formatDate this.date}}
+                                        </small>
+                                    </div>
+                                    <p class="mb-1">{{this.session_name}}</p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>{{this.start_time}} - {{this.end_time}}
+                                    </small>
+                                </div>
+                            {{/each}}
+                        {{else}}
+                            <div class="list-group-item text-center py-4">
+                                <p class="mb-0 text-muted">
+                                    <i class="fas fa-calendar-day me-2"></i>No recent activity
+                                </p>
+                                <small>Mark your attendance to see it here</small>
+                            </div>
+                        {{/if}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campus Images -->
+    <div class="row">
+        <div class="col-12 mb-3">
+            <h4><i class="fas fa-university me-2"></i>Campus Facilities</h4>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <img src="https://pixabay.com/get/g36057730d4abc9fc3736e31faf0afeb7bfc2888cb9680fd1bd9b12795d0d79d7a36c2ce157c31fb4f7a8b4384a6d4912f1a4f1fb46ec20fba0f30c09e1e80a4f_1280.jpg" 
+                    class="card-img-top campus-img" alt="Campus View" loading="lazy">
+                <div class="card-body">
+                    <h5 class="card-title">Main Campus</h5>
+                    <p class="card-text">Beautiful, modern campus with state-of-the-art facilities for students.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <img src="https://pixabay.com/get/g7005ad4e986373217c4abb870025f18b8f80e6efe19c1813ab4b89944e7bed1321b485ea35e9cd68842e1e389fb8089c38292d0c886c6ac2b127587134ef6a7e_1280.jpg" 
+                    class="card-img-top campus-img" alt="Computer Lab" loading="lazy">
+                <div class="card-body">
+                    <h5 class="card-title">Computer Lab</h5>
+                    <p class="card-text">Modern computer labs equipped with the latest software and hardware.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <img src="https://pixabay.com/get/gb9d5297184923c4d8f9aeca2f31cae53df719b1ce71e67af1e78de58b925e56f41922e8db02e4e8af8efdfa6aedc4532b30d0ab73689dda9c2b438e56ee901b4_1280.jpg" 
+                    class="card-img-top campus-img" alt="Study Area" loading="lazy">
+                <div class="card-body">
+                    <h5 class="card-title">Study Areas</h5>
+                    <p class="card-text">Comfortable study spaces available throughout the campus.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
