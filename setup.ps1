@@ -72,8 +72,8 @@ foreach ($file in $files.Keys) {
 $envContent = @"
 # Database Configuration
 DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=
+DB_USER=postgres
+DB_PASSWORD=12345678
 DB_NAME=college_lab_portal
 
 # Server Configuration
